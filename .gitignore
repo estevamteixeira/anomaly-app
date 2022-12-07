@@ -6,3 +6,4 @@
 data/
 *.rds
 *.knit.md
+rsconnect/
