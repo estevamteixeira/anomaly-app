@@ -1,0 +1,14 @@
+name: test
+title: test
+username:
+account: estevam-teixeira
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 7510651
+bundleId: 6574790
+url: https://estevam-teixeira.shinyapps.io/test/
+when: 1669850650.31862
+lastSyncTime: 1669850650.31865
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: constants/data_build.R|data/app.R

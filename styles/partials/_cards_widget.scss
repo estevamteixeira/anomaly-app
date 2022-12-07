@@ -1,0 +1,140 @@
+.box {
+  background-color: #fff;
+  height: 100%;
+  margin: 0;
+  padding: 15px;
+
+  &.metric {
+    display: grid;
+    grid-auto-rows: 80px;
+    gap: 15px;
+    padding: 20px;
+
+    .icon {
+      @include background-image-container;
+      background-position: center;
+    }
+  
+    .value {
+      color: $color-primary;
+      display: flex;
+      flex-direction: column;
+      font-size: 18px;
+      justify-content: space-between;
+      line-height: 20px;
+      text-align: left;
+  
+      label {
+        border-bottom: 1px solid $color-ash;
+        color: $color-secondary;
+        padding-bottom: 5px;
+      }
+    }
+  }
+
+  &.metric-global {
+    grid-template-columns: 80px 1fr;
+  }
+
+  &.metric-local {
+
+    @media (max-width: 1199px) {
+      grid-template-columns: 80px 1fr;
+    }
+
+    @media (min-width: 1200px) {
+      grid-template-rows: 80px 1fr;
+  
+      .value {
+        justify-content: center;
+        text-align: center;
+      }
+    }
+  }
+
+  &.metric-global-1 {
+    grid-area: gm1;
+    .icon { background-image: url("../images/pediatrics.svg"); }
+  }
+
+  &.metric-global-2 {
+    grid-area: gm2;
+    .icon { background-image: url("../images/cong_anom.svg"); }
+  }
+
+  &.metric-global-3 {
+    grid-area: gm3;
+    .icon { background-image: url("../images/birth-rate.svg"); }
+  }
+
+  &.metric-global-4 {
+    grid-area: gm4;
+    .icon { background-image: url("../images/pediatrics.svg"); }
+  }
+  
+  &.metric-local-1 {
+    grid-area: lm1;
+    .icon { background-image: url("../images/newborn.svg"); }
+  }
+
+  &.metric-local-2 {
+    grid-area: lm2;
+    .icon { background-image: url("../images/cong_anom.svg"); }
+  }
+
+  &.metric-local-3 {
+    grid-area: lm3;
+    .icon { background-image: url("../images/birth-rate.svg"); }
+  }
+  
+  &.metric-local-4 {
+    grid-area: lm4;
+    .icon { background-image: url("../images/pediatrics.svg"); }
+  }
+}
+
+.map-grid-wrapper,
+.table-grid-wrapper,
+.line-grid-wrapper,
+.barchart-grid-wrapper {
+  > div {
+    height: 100%;
+    padding: 0;
+  }
+
+  .box-primary {
+    height: 100%;
+  }
+
+  .box-header {
+    height: 30px;
+    padding: 0;
+  }
+
+  .box-body {
+    height: calc(100% - 30px);
+  }
+
+  #map_view-mapview,
+  .highcharts-container,
+  .highchart,
+  .highcharts-root {
+    height: 100% !important;
+  }
+}
+
+.map-grid-wrapper {
+  grid-area: map;
+}
+
+.table-grid-wrapper {
+  grid-area: table;
+}
+
+.line-grid-wrapper {
+  grid-area: linechart;
+}
+
+.barchart-grid-wrapper {
+  grid-area: barchart;
+}

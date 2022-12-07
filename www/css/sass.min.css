@@ -1,0 +1,533 @@
+/* The @mixin directive lets you create CSS code that is to be reused throughout the website */
+.box.box-primary {
+  border-top-color: #008d8b !important;
+}
+
+a {
+  color: #5C9895;
+}
+
+body {
+  height: 100vh;
+  overflow: hidden;
+}
+
+body .wrapper {
+  background-color: #008d8b;
+  height: 100%;
+  overflow: hidden;
+}
+
+body .wrapper > .content-wrapper {
+  background-color: #E3E7E9;
+  height: calc(100vh - 70px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  position: relative;
+  z-index: 1;
+}
+
+body .wrapper > .content-wrapper > .content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 30px;
+  width: 100%;
+}
+
+body .wrapper > .content-wrapper > .content > .tab-content {
+  height: 100%;
+}
+
+body .wrapper > .content-wrapper > .content > .tab-content > .tab-pane {
+  height: 100%;
+}
+
+.main-content-grid {
+  display: grid;
+  gap: 15px;
+  width: 100%;
+}
+
+.main-content-grid.simple-grid {
+  grid-template-areas: "gm1       gm2       gm3 " "table     table     barchart" "linechart linechart linechart";
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: auto 480px;
+}
+
+.main-content-grid.advanced-grid {
+  grid-template-areas: "lm1       lm1       lm2       lm2      lm3      lm3" "map       map       map       table    table    table" "linechart linechart linechart barchart barchart barchart";
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: auto repeat(1, 480px);
+}
+
+@media (max-width: 1199px) {
+  .main-content-grid.simple-grid {
+    grid-template-areas: "gm1       gm1     " "gm2       gm2     " "gm3       gm3     " "table     table   " "barchart  barchart" "linechart linehcart";
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, auto) repeat(2, 480px);
+  }
+  .main-content-grid.advanced-grid {
+    grid-template-areas: "lm1       lm2       lm3" "map       map       map" "table     table     table" "barchart  barchart  barchart" "linechart linechart linechart";
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: auto 480px repeat(1, 480px);
+  }
+}
+
+#intro {
+  margin-bottom: 0;
+  align-items: center;
+  display: block;
+  margin: 0 auto;
+  background: #008d8b;
+  color: white;
+  min-width: 25%;
+  border-color: white;
+}
+
+#icd10 {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 90%;
+  padding: 15px;
+  font-size: 20pt;
+  border-radius: 0;
+  outline: none;
+  border: 2px solid #3A506B;
+  color: #3A506B;
+  background: url(menu-chevron-down.svg) no-repeat;
+  background-position: 95% 20px;
+  background-color: white;
+}
+
+#icd10 optgroup {
+  padding: 5px;
+  border-top: 1px solid #bdbdbd;
+  font-size: 14pt;
+}
+
+.wrapper .main-header {
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  height: 70px;
+  width: 100%;
+  z-index: 2;
+}
+
+.wrapper .main-header > .logo {
+  display: none;
+}
+
+.wrapper .main-header .navbar {
+  align-items: center;
+  background-color: #FFF;
+  display: flex;
+  height: 100%;
+  margin-left: 0;
+}
+
+.wrapper .main-header .navbar .sidebar-toggle {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  color: #008d8b;
+  font-size: 20px;
+  height: 100%;
+  transition: background-color 0.25s;
+  width: 70px;
+  /*display: none;*/
+}
+
+.wrapper .main-header .navbar .sidebar-toggle:hover {
+  background-color: #5C9895;
+  color: #fff;
+}
+
+.wrapper .main-header .navbar > .navbar-custom-menu {
+  height: 100%;
+  width: 100%;
+}
+
+.wrapper .main-header .navbar > .navbar-custom-menu > .navbar-nav {
+  align-items: center;
+  display: flex;
+  height: 100%;
+  justify-content: space-between;
+  padding: 10px 20px 10px 10px;
+  width: 100%;
+}
+
+.wrapper .main-header .navbar > .navbar-custom-menu > .navbar-nav .dropdown {
+  color: #5C9895;
+  font-weight: 600;
+}
+
+.wrapper .main-header .navbar > .navbar-custom-menu > .navbar-nav .dropdown:not(:last-child) {
+  margin-right: 20px;
+}
+
+.wrapper .main-header .navbar > .navbar-custom-menu > .navbar-nav .dropdown.logo {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  background: #FFF;
+  height: 100%;
+  padding: 0;
+  width: auto;
+}
+
+.wrapper .main-header .navbar > .navbar-custom-menu > .navbar-nav .dropdown.logo .logo-link {
+  padding: 0;
+}
+
+.wrapper .main-header .navbar > .navbar-custom-menu > .navbar-nav .dropdown.logo .logo-link:hover {
+  background-color: transparent;
+}
+
+.wrapper .main-header .navbar > .navbar-custom-menu > .navbar-nav .dropdown.logo .logo-link .logo-img {
+  height: calc(2.2*70px);
+  /* $header-height */
+  width: auto;
+}
+
+.wrapper .main-header .navbar > .navbar-custom-menu > .navbar-nav .dropdown.title > h1 {
+  color: #008d8b;
+  font-size: 24px !important;
+  font-weight: 600;
+  margin: 0;
+}
+
+.wrapper .main-header .navbar > .navbar-custom-menu > .navbar-nav .dropdown.version > p {
+  font-size: 16px;
+  margin: 0;
+}
+
+.wrapper .main-header .navbar > .navbar-custom-menu > .navbar-nav .dropdown.time-range {
+  flex-grow: 1;
+}
+
+.wrapper .main-header .navbar > .navbar-custom-menu > .navbar-nav .dropdown.time-range > p {
+  color: #008d8b;
+  font-weight: 400;
+  font-size: 18px;
+  margin: 0;
+}
+
+.wrapper .main-sidebar {
+  background-color: #FFF;
+  margin-top: 70px;
+  padding-top: 30px;
+  z-index: 0;
+}
+
+.wrapper .main-sidebar .sidebar > .sidebar-menu > li > a {
+  border: none;
+  color: #FFF;
+  font-size: 16px;
+  padding: 15px;
+  transition: background-color 0.25s, padding 0.5s;
+}
+
+.wrapper .main-sidebar .sidebar > .sidebar-menu > li > a:hover {
+  background-color: #5c9895;
+}
+
+.wrapper .main-sidebar .sidebar > .sidebar-menu > li.active > a {
+  background-color: #5C9895;
+  font-weight: 600;
+  padding-left: 25px;
+}
+
+.datatables > .dataTables_wrapper {
+  overflow: auto;
+}
+
+.datatables > .dataTables_wrapper > .dataTables_filter {
+  position: absolute;
+  top: 12px;
+  right: 25px;
+}
+
+.datatables > .dataTables_wrapper > .dataTables_filter > label .form-control {
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.datatables > .dataTables_wrapper > .dataTables_filter > label .form-control:focus {
+  border-color: #5C9895;
+  box-shadow: 0 0 8px rgba(92, 152, 149, 0.3);
+}
+
+.datatables > .dataTables_wrapper > .dataTables_paginate {
+  bottom: 0px;
+  position: relative;
+  right: 0px;
+}
+
+.datatables > .dataTables_wrapper > .dataTables_paginate > ul.pagination > li.paginate_button.active > a {
+  background-color: #5C9895;
+}
+
+.datatables > .dataTables_wrapper > .table.dataTable > thead > tr > th, .datatables > .dataTables_wrapper > .table.dataTable tfoot > tr > th {
+  white-space: nowrap;
+}
+
+.datatables > .dataTables_wrapper > .table.dataTable > tbody > tr > td {
+  border: none;
+  transition: background-color 0.3s;
+}
+
+.datatables > .dataTables_wrapper > .table.dataTable > tbody > tr.odd:hover > td, .datatables > .dataTables_wrapper > .table.dataTable > tbody > tr.even:hover > td {
+  background-color: rgba(92, 152, 149, 0.5);
+}
+
+.datatables > .dataTables_wrapper > .table.dataTable > tbody > tr.odd > td {
+  background-color: rgba(227, 231, 233, 0.5);
+}
+
+.datatables > .dataTables_wrapper > .table.dataTable > tbody > tr.active > td, .datatables > .dataTables_wrapper > .table.dataTable > tbody > tr.active:hover > td {
+  background-color: #5C9895;
+}
+
+.box {
+  background-color: #fff;
+  height: 100%;
+  margin: 0;
+  padding: 15px;
+}
+
+.box.metric {
+  display: grid;
+  grid-auto-rows: 80px;
+  gap: 15px;
+  padding: 20px;
+}
+
+.box.metric .icon {
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+}
+
+.box.metric .value {
+  color: #5C9895;
+  display: flex;
+  flex-direction: column;
+  font-size: 18px;
+  justify-content: space-between;
+  line-height: 20px;
+  text-align: left;
+}
+
+.box.metric .value label {
+  border-bottom: 1px solid #B3B8BA;
+  color: #008d8b;
+  padding-bottom: 5px;
+}
+
+.box.metric-global {
+  grid-template-columns: 80px 1fr;
+}
+
+@media (max-width: 1199px) {
+  .box.metric-local {
+    grid-template-columns: 80px 1fr;
+  }
+}
+
+@media (min-width: 1200px) {
+  .box.metric-local {
+    grid-template-rows: 80px 1fr;
+  }
+  .box.metric-local .value {
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+.box.metric-global-1 {
+  grid-area: gm1;
+}
+
+.box.metric-global-1 .icon {
+  background-image: url("../images/pediatrics.svg");
+}
+
+.box.metric-global-2 {
+  grid-area: gm2;
+}
+
+.box.metric-global-2 .icon {
+  background-image: url("../images/cong_anom.svg");
+}
+
+.box.metric-global-3 {
+  grid-area: gm3;
+}
+
+.box.metric-global-3 .icon {
+  background-image: url("../images/birth-rate.svg");
+}
+
+.box.metric-global-4 {
+  grid-area: gm4;
+}
+
+.box.metric-global-4 .icon {
+  background-image: url("../images/pediatrics.svg");
+}
+
+.box.metric-local-1 {
+  grid-area: lm1;
+}
+
+.box.metric-local-1 .icon {
+  background-image: url("../images/newborn.svg");
+}
+
+.box.metric-local-2 {
+  grid-area: lm2;
+}
+
+.box.metric-local-2 .icon {
+  background-image: url("../images/cong_anom.svg");
+}
+
+.box.metric-local-3 {
+  grid-area: lm3;
+}
+
+.box.metric-local-3 .icon {
+  background-image: url("../images/birth-rate.svg");
+}
+
+.box.metric-local-4 {
+  grid-area: lm4;
+}
+
+.box.metric-local-4 .icon {
+  background-image: url("../images/pediatrics.svg");
+}
+
+.map-grid-wrapper > div,
+.table-grid-wrapper > div,
+.line-grid-wrapper > div,
+.barchart-grid-wrapper > div {
+  height: 100%;
+  padding: 0;
+}
+
+.map-grid-wrapper .box-primary,
+.table-grid-wrapper .box-primary,
+.line-grid-wrapper .box-primary,
+.barchart-grid-wrapper .box-primary {
+  height: 100%;
+}
+
+.map-grid-wrapper .box-header,
+.table-grid-wrapper .box-header,
+.line-grid-wrapper .box-header,
+.barchart-grid-wrapper .box-header {
+  height: 30px;
+  padding: 0;
+}
+
+.map-grid-wrapper .box-body,
+.table-grid-wrapper .box-body,
+.line-grid-wrapper .box-body,
+.barchart-grid-wrapper .box-body {
+  height: calc(100% - 30px);
+}
+
+.map-grid-wrapper #map_view-mapview,
+.map-grid-wrapper .highcharts-container,
+.map-grid-wrapper .highchart,
+.map-grid-wrapper .highcharts-root,
+.table-grid-wrapper #map_view-mapview,
+.table-grid-wrapper .highcharts-container,
+.table-grid-wrapper .highchart,
+.table-grid-wrapper .highcharts-root,
+.line-grid-wrapper #map_view-mapview,
+.line-grid-wrapper .highcharts-container,
+.line-grid-wrapper .highchart,
+.line-grid-wrapper .highcharts-root,
+.barchart-grid-wrapper #map_view-mapview,
+.barchart-grid-wrapper .highcharts-container,
+.barchart-grid-wrapper .highchart,
+.barchart-grid-wrapper .highcharts-root {
+  height: 100% !important;
+}
+
+.map-grid-wrapper {
+  grid-area: map;
+}
+
+.table-grid-wrapper {
+  grid-area: table;
+}
+
+.line-grid-wrapper {
+  grid-area: linechart;
+}
+
+.barchart-grid-wrapper {
+  grid-area: barchart;
+}
+
+.footer {
+  /* specifies the default alignment for items inside the flexible container */
+  align-items: center;
+  /* defines a flex container */
+  display: flex;
+  /* top to bottom */
+  flex-direction: column;
+  /* defines the ability for a flex item to grow if necessary. It accepts a unitless value that serves as a proportion */
+  flex-grow: 100;
+  /* this defines the alignment along the main axis */
+  justify-content: center;
+  margin-top: 20px;
+  padding-bottom: 10px;
+  /* The @media rule is used in media queries to apply different styles for different media types/devices
+*/
+  /* The @include directive is created to let you use (include) the mixin 
+see: styles/modules/_mixins.scss*/
+}
+
+@media (max-width: 787px) {
+  .footer {
+    /* This defines the default behavior for how flex items are laid out along the cross axis on the current line */
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.footer-heading {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  color: #008d8b;
+  font-size: 14px;
+  font-weight: normal;
+  margin: 0;
+  text-align: center;
+}
+
+@media (max-width: 787px) {
+  .footer-heading {
+    flex-direction: column;
+  }
+}
+
+.footer-link {
+  color: #818485;
+  font-weight: bold;
+  text-decoration: none;
+  /* tells the browser that we're planning to transition background colors and nothing else when a transition occurs between hovered and non-hovered states (transitioning from $color-grey to $color-primary)
+    The transition should take 0.2 seconds */
+  transition: color 0.2s;
+  margin: 5px;
+}
+
+.footer-link:hover {
+  color: #5C9895;
+}

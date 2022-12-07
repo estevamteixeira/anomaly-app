@@ -1,0 +1,53 @@
+.footer {
+  /* specifies the default alignment for items inside the flexible container */
+  align-items: center;
+  /* defines a flex container */
+  display: flex;
+  /* top to bottom */
+  flex-direction: column;
+  /* defines the ability for a flex item to grow if necessary. It accepts a unitless value that serves as a proportion */
+  flex-grow: 100;
+  /* this defines the alignment along the main axis */
+  justify-content: center;
+  margin-top: 20px;
+  padding-bottom: 10px;
+
+/* The @media rule is used in media queries to apply different styles for different media types/devices
+*/
+
+  @media (max-width: 787px) {
+    /* This defines the default behavior for how flex items are laid out along the cross axis on the current line */
+    align-items: center;
+    justify-content: center;
+  }
+
+/* The @include directive is created to let you use (include) the mixin 
+see: styles/modules/_mixins.scss*/
+  &-heading {
+    @include flexCenter;
+    
+    color: $color-secondary;
+    font-size: 14px;
+    font-weight: normal;
+    margin: 0;
+    text-align: center;
+
+    @media (max-width: 787px) {
+      flex-direction: column;
+    }
+  }
+
+  &-link {
+    color: $color-grey;
+    font-weight: bold;
+    text-decoration: none;
+    /* tells the browser that we're planning to transition background colors and nothing else when a transition occurs between hovered and non-hovered states (transitioning from $color-grey to $color-primary)
+    The transition should take 0.2 seconds */
+    transition: color 0.2s;
+    margin: 5px;
+
+    &:hover {
+      color: $color-primary;
+    }
+  }
+}

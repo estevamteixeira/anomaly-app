@@ -1,0 +1,100 @@
+body {
+  height: 100vh;
+  overflow: hidden;
+
+  .wrapper {    
+    background-color: $color-secondary;
+    height: 100%;
+    overflow: hidden;
+
+    > .content-wrapper {
+      background-color: $color-ash-light;
+      height: calc(100vh - #{$header-height});
+      overflow-x: hidden;
+      overflow-y: auto;
+      position: relative;
+      z-index: 1;
+
+      > .content {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        padding: 30px;
+        width: 100%;
+
+        > .tab-content {
+          height: 100%;
+
+          > .tab-pane {
+            height: 100%;
+          }
+        }
+      }
+    }
+  }
+}
+
+.main-content-grid {
+  display: grid;
+  gap: 15px;
+  width: 100%;
+
+  &.simple-grid {
+    grid-template-areas:
+      "gm1       gm2       gm3 "
+      "table     table     barchart"
+      "linechart linechart linechart";
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: auto 480px;
+  }
+
+  &.advanced-grid {
+    grid-template-areas:
+      "lm1       lm1       lm2       lm2      lm3      lm3"
+      "map       map       map       table    table    table"
+      "linechart linechart linechart barchart barchart barchart";
+    grid-template-columns: repeat(6, 1fr);
+    grid-template-rows: auto repeat(1, 480px)
+  }
+  
+  @media (max-width: 1199px) {
+
+    &.simple-grid {
+      grid-template-areas:
+        "gm1       gm1     "
+        "gm2       gm2     "
+        "gm3       gm3     "
+        "table     table   "
+        "barchart  barchart"
+        "linechart linehcart";
+      grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: repeat(2, auto) repeat(2, 480px);
+    }
+  
+    &.advanced-grid {
+      grid-template-areas:
+        "lm1       lm2       lm3"
+        "map       map       map"
+        "table     table     table"
+        "barchart  barchart  barchart"
+        "linechart linechart linechart";
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: auto 480px repeat(1, 480px);
+    }
+  }
+}
+#intro {
+    margin-bottom: 0;
+    align-items: center;
+    display: block;
+    margin: 0 auto;
+    background: $color-secondary;
+    color: white;
+    min-width: 25%;
+    border-color: white
+}
+#icd10 optgroup{
+  padding: 5px;
+  border-top: 1px solid #bdbdbd;
+  font-size: 14pt;
+}

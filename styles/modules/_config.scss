@@ -1,0 +1,65 @@
+// Main colors
+$color-white: #FFF;
+$color-black: #0A1E2B;
+$color-primary: #5C9895;
+$color-secondary: #008d8b;
+$color-terciary: #EBF3F2;
+$color-grey: #818485;
+$color-ash: #B3B8BA;
+$color-ash-light: #E3E7E9;
+
+// Sizes
+$header-height: 70px;
+
+// Hover effect
+$hover-fast: 0.15s;
+$hover-normal: 0.25s;
+$hover-slow: 0.5s;
+
+// Shadows
+$shadow-header: 0 4px 15px rgba(0,0,0,.15);
+$shadow-content: 0 0 40px rgba(0,0,0,.2);
+$shadow-card: 0 3px 10px rgba(0,0,0,.25);
+
+// grid
+$maxContentWidth: rem(1600px);
+$infoBoxHeight: rem(100px);
+$gutter: rem(24px);
+
+// fonts
+$fontPrimary: "Maven Pro", sans-serif;
+
+// Radius
+$radius-box: 10px;
+
+// breakpoints
+$breakXs: 380px;
+$breakSm: 576px;
+$breakMd: 768px;
+$breakLg: 1080px;
+$breakXl: 1200px;
+
+// box shadow
+$boxShadowSmall: 0 2px 8px -2px transparentize($color-grey, 0.6);
+$boxShadowLarge: 0 4px 25px 0 transparentize($color-grey, 0.9);
+
+// rounded corners
+$filletSmall: 6px;
+$filletLarge: 10px;
+
+// spacings
+$spacingSm: rem(8px);
+$spacingMd: rem(20px);
+$spacingLg: rem(32px);
+
+// icons
+$dropdownIconSizeSmall: 10px;
+$dropdownIconSizeLarge: 15px;
+$dashboardLogoWidth: 80px;
+$mainLogoWidth: 180px;
+$infographicIconSize: 30px;
+
+// transitions
+$dropdownIconTransition: 0.2s;
+$dropdownTransition: 0.2s;
+$hoverTransition: 0.2s;
