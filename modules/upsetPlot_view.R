@@ -2,6 +2,7 @@
 # These listed imports are made available inside the module scope.
 import("data.table")
 import("plotly")
+import("rintrojs")
 import("shiny")
 import("shinydashboard")
 import("tidyverse")
@@ -28,6 +29,7 @@ ui <- function(id){
   # prefix all ids with a string
   ns <- NS(id)
   
+  introBox(data.step = 9, data.intro = consts$intro$text[9],
   box(
     title = "Data Sources",
     status = "primary",
@@ -38,6 +40,7 @@ ui <- function(id){
     # except that the id is wrapped into 
     # the ns() function we defined before
     plotly::plotlyOutput(ns("dataupset"))
+    )
   )
 }
 

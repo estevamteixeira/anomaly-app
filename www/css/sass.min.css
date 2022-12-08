@@ -85,28 +85,6 @@ body .wrapper > .content-wrapper > .content > .tab-content > .tab-pane {
   border-color: white;
 }
 
-#icd10 {
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  width: 90%;
-  padding: 15px;
-  font-size: 20pt;
-  border-radius: 0;
-  outline: none;
-  border: 2px solid #3A506B;
-  color: #3A506B;
-  background: url(menu-chevron-down.svg) no-repeat;
-  background-position: 95% 20px;
-  background-color: white;
-}
-
-#icd10 optgroup {
-  padding: 5px;
-  border-top: 1px solid #bdbdbd;
-  font-size: 14pt;
-}
-
 .wrapper .main-header {
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
   height: 70px;

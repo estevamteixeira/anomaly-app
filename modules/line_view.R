@@ -3,6 +3,7 @@
 import("data.table")
 import("ggplot2")
 import("plotly")
+import("rintrojs")
 import("shiny")
 import("shinydashboard")
 import("tidyverse")
@@ -29,7 +30,7 @@ ui <- function(id){
   # "namespacing" function, that will 
   # prefix all ids with a string
   ns <- NS(id)
-  
+  introBox(data.step = 7, data.intro = consts$intro$text[7],
   box(
     title = "Surveillance Over Time",
     status = "primary",
@@ -38,6 +39,7 @@ ui <- function(id){
     width = 12,
     fluidRow(
       column(width = 3,
+        introBox(data.step = 8, data.intro = consts$intro$text[8],
              selectInput(
                inputId = ns("line_risk"),
                label = shiny::HTML(
@@ -46,13 +48,12 @@ ui <- function(id){
                choices = c("None" = "0",
                            "Phenotypical Sex" = "SexNum"),
                selected = c("0"))
-             )
-      ),
+             ))),
     # This looks the same as your usual piece of code, 
     # except that the id is wrapped into 
     # the ns() function we defined before
     plotly::plotlyOutput(ns("countyline"))
-  )
+    ))
 }
 
 
