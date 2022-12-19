@@ -569,9 +569,9 @@ dta_nom <- dta[,.(
   # area = fifelse(DLPSTCOD %in% urb_pc,
   #                "Urban",
   #                "Rural")
-  )]
-  # .[, `:=` (cd.count_dlv = .N), by = list(BrthYear, CD_UID, dlv)] %>%
-  # unique()
+  )] %>% 
+  .[, `:=` (cd.count_dlv = .N), by = list(BrthYear, CD_UID, dlv)] %>%
+  unique()
 
 ## It seems that some CountyNo do not have a match when looking into pccf
 ## let's fix this:
@@ -698,7 +698,7 @@ d1 <- merge(anom_l[anom_l$idx_anom %in% d1$idx_anom],
        "smoker","bmipp","matage","diab", "NASOnly", "NAS_MRDx", "NAS", "Any_OAT", "NASorAny_OAT", 
        "RxOpioid", "OpdAbuse", "MatOpUse", "NOWS", "Rx_w_NAS_Poten", 
        "NonRx_w_NAS_Poten", "Alcohol_Use", "Cannabis_Use", "DrgNchmclAbus", 
-       "Substance_Use", "DnCAnoCan", "drugs","SrceIDs","SGC_Res")
+       "Substance_Use", "DnCAnoCan", "drugs","SrceIDs")
   ]
 
 ## put together those matched and uniquely identified
@@ -737,7 +737,7 @@ d1 <- merge(anom_l[anom_l$idx_anom %in% d1$idx_anom],
        "smoker","bmipp","matage","diab", "NASOnly", "NAS_MRDx", "NAS", "Any_OAT", "NASorAny_OAT", 
        "RxOpioid", "OpdAbuse", "MatOpUse", "NOWS", "Rx_w_NAS_Poten", 
        "NonRx_w_NAS_Poten", "Alcohol_Use", "Cannabis_Use", "DrgNchmclAbus", 
-       "Substance_Use", "DnCAnoCan", "drugs","SrceIDs","SGC_Res")
+       "Substance_Use", "DnCAnoCan", "drugs","SrceIDs")
   ]
 
 ## put together those matched and uniquely identified
@@ -778,7 +778,7 @@ d1 <- merge(anom_l[anom_l$idx_anom %in% d1$idx_anom],
        "smoker","bmipp","matage","diab", "NASOnly", "NAS_MRDx", "NAS", "Any_OAT", "NASorAny_OAT", 
        "RxOpioid", "OpdAbuse", "MatOpUse", "NOWS", "Rx_w_NAS_Poten", 
        "NonRx_w_NAS_Poten", "Alcohol_Use", "Cannabis_Use", "DrgNchmclAbus", 
-       "Substance_Use", "DnCAnoCan", "drugs","SrceIDs","SGC_Res")
+       "Substance_Use", "DnCAnoCan", "drugs","SrceIDs")
   ]
 
 ## put together those matched and uniquely identified
@@ -820,7 +820,7 @@ d1 <- merge(anom_l[anom_l$idx_anom %in% d1$idx_anom],
        "smoker","bmipp","matage","diab", "NASOnly", "NAS_MRDx", "NAS", "Any_OAT", "NASorAny_OAT", 
        "RxOpioid", "OpdAbuse", "MatOpUse", "NOWS", "Rx_w_NAS_Poten", 
        "NonRx_w_NAS_Poten", "Alcohol_Use", "Cannabis_Use", "DrgNchmclAbus", 
-       "Substance_Use", "DnCAnoCan", "drugs","SrceIDs","SGC_Res")
+       "Substance_Use", "DnCAnoCan", "drugs","SrceIDs")
   ]
 
 ## put together those matched and uniquely identified
@@ -863,7 +863,7 @@ d1 <- merge(anom_l[anom_l$idx_anom %in% d1$idx_anom],
        "smoker","bmipp","matage","diab", "NASOnly", "NAS_MRDx", "NAS", "Any_OAT", "NASorAny_OAT", 
        "RxOpioid", "OpdAbuse", "MatOpUse", "NOWS", "Rx_w_NAS_Poten", 
        "NonRx_w_NAS_Poten", "Alcohol_Use", "Cannabis_Use", "DrgNchmclAbus", 
-       "Substance_Use", "DnCAnoCan", "drugs","SrceIDs","SGC_Res")
+       "Substance_Use", "DnCAnoCan", "drugs","SrceIDs")
   ]
 
 # ## put together those matched and uniquely identified
@@ -882,13 +882,13 @@ anom_cd <- d2 %>%
   .[#!is.na(CD_UID)
     ,
     c("CaseID","BIRTHID","MOTHERID","CONTCTID","CD_UID", "DLCOUNTY","Birth_Date",
-      "BrthYear", "DLHSPDHA", "DLHosp","SexNum", "Diags","cat_tier2", "sentinel",
+      "BrthYear", "DLHSPDHA", "DLHosp","SGC_Res","SexNum", "Diags","cat_tier2", "sentinel",
       "GA_BEST", "DMMATAGE", "R004_00200", "R004_00800", 
       "R004_01300", "MDRUGC", "smoker", "bmipp","matage", "diab", 
       "NASOnly", "NAS_MRDx", "NAS", "Any_OAT", "NASorAny_OAT", "RxOpioid", 
       "OpdAbuse", "MatOpUse", "NOWS", "Rx_w_NAS_Poten", "NonRx_w_NAS_Poten", 
       "Alcohol_Use", "Cannabis_Use", "DrgNchmclAbus", "Substance_Use", 
-      "DnCAnoCan", "drugs", "SrceIDs","SGC_Res")] %>% 
+      "DnCAnoCan", "drugs", "SrceIDs")] %>% 
   unique() %>%
   .[order(CaseID, BIRTHID,MOTHERID,CONTCTID, CD_UID, BrthYear, cat_tier2)] %>% 
   # .[CD_UID > 1200 & CD_UID < 1299] %>% 

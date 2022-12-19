@@ -175,7 +175,7 @@ plot_risk_line <- function(data, var, risk){
                                       "Male"))
       pal <- c("-1" = "#FFFFFF", 
                "Female" = "#E41A1C",
-               "Male" = "#377EB8")
+               "Male" = "#008D8B")
       
     } else if(tolower(rsk) %in% "bmipp"){
       dta$bmipp <- factor(dta$bmipp,
@@ -194,28 +194,38 @@ plot_risk_line <- function(data, var, risk){
       dta$Cannabis_Use <- factor(dta$Cannabis_Use,
                          labels = c("No",
                                     "Yes"))
-      pal <- c("No" = "#E41A1C", 
-               "Yes" = "#377EB8")
+      pal <- c("No" = "#008D8B", 
+               "Yes" = "#E41A1C")
     } else if(tolower(rsk) %in% "diab"){
       dta$diab <- factor(dta$diab,
                          labels = c("No",
                                     "Yes"))
-      pal <- c("No" = "#E41A1C", 
-               "Yes" = "#377EB8")
+      pal <- c("No" = "#008D8B", 
+               "Yes" = "#E41A1C")
     } else if(tolower(rsk) %in% "smoker"){
       dta$smoker <- factor(dta$smoker,
                          labels = c("-1",
                                     "No",
                                     "Yes"))
       pal <- c("-1" = "#FFFFFF",
-               "No" = "#E41A1C", 
-               "Yes" = "#377EB8")
+               "No" = "#008D8B", 
+               "Yes" = "#E41A1C")
     } else if(tolower(rsk) %in% "matage"){
       dta$matage <- factor(dta$matage,
                            labels = c("Age < 35",
                                       "Age \u2265 35"))
       pal <- c("Age < 35" = "#E41A1C", 
-               "Age \u2265 35" = "#377EB8")
+               "Age \u2265 35" = "#008D8B")
+    } else if(tolower(rsk) %in% "area"){
+      dta$area <- factor(dta$area)
+      pal <- c("Rural" = "#E41A1C", 
+               "Urban" = "#008D8B")
+    }else if(tolower(rsk) %in% "alcohol_use"){
+      dta$Alcohol_Use <- factor(dta$Alcohol_Use,
+                                labels = c("No",
+                                           "Yes"))
+      pal <- c("No" = "#E41A1C", 
+               "Yes" = "#008D8B")
     }
   }
   

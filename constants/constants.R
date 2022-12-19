@@ -132,13 +132,16 @@ metrics_list <- list(
 
 icd10_opts <- c(unique(levels(cd_anom$cat_tier2)))
 
-risk_opts <- sort(c("SexNum","matage","smoker","bmipp","diab","Cannabis_Use"))
-names(risk_opts) <- c("BMI",
+risk_opts <- sort(c("SexNum","matage","smoker","bmipp","diab","Cannabis_Use","Alcohol_Use","area"))
+names(risk_opts) <- c("Alcohol Use",
+                      "Location",
+                      "BMI",
                       "Cannabis Use",
                       "Diabetes",
                       "Maternal Age",
-                      "Phenotypical Sex",
+                      "Fetal Sex",
                       "Smoking Use")
+risk_opts <- risk_opts[order(names(risk_opts))]
 
 rcp_logo <- tags$a(
   href = rcp_website,
