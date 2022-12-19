@@ -54,7 +54,8 @@ plot_line <- function(data, var){
       #showlegend = FALSE,
       legend = list(
         orientation = "h",
-        y = -0.25, x = 0.35,
+        y = -0.25, x = 0.5,
+        xanchor = "center", yanchor = "middle",
         font = list(
           size = 12,
           face = "bold"
@@ -166,17 +167,59 @@ plot_risk_line <- function(data, var, risk){
   }
   
   if(any(unique(names(dta) %in% rsk))){
-    if(rsk %in% "SexNum"){
+    if(tolower(rsk) %in% "sexnum"){
       dta$SexNum <- factor(dta$SexNum,
                            levels = levels(dta$SexNum),
-                           labels = c("Ambiguous","Female", "Male"))
-      pal <- c("Ambiguous" = "#B3B8BA", 
-               "Female" = "#FF0000",
-               "Male" = "#0000FF")
+                           labels = c("-1",
+                                      "Female",
+                                      "Male"))
+      pal <- c("-1" = "#FFFFFF", 
+               "Female" = "#E41A1C",
+               "Male" = "#377EB8")
+      
+    } else if(tolower(rsk) %in% "bmipp"){
+      dta$bmipp <- factor(dta$bmipp,
+                           labels = c("-1",
+                                      "Underweight (BMI < 18.5)",
+                                      "Normal weight (18.5 \u2264 BMI < 25)",
+                                      "Overweight (25 \u2264 BMI < 30)",
+                                      "Obese (BMI \u2265 30)"))
+      pal <- c("-1" = "#FFFFFF", 
+               "Underweight (BMI < 18.5)" = "#E41A1C",
+               "Normal weight (18.5 \u2264 BMI < 25)" = "#377EB8",
+               "Overweight (25 \u2264 BMI < 30)" = "#4DAF4A",
+               "Obese (BMI \u2265 30)" = "#984ea3")
+      
+    } else if(tolower(rsk) %in% "cannabis_use"){
+      dta$Cannabis_Use <- factor(dta$Cannabis_Use,
+                         labels = c("No",
+                                    "Yes"))
+      pal <- c("No" = "#E41A1C", 
+               "Yes" = "#377EB8")
+    } else if(tolower(rsk) %in% "diab"){
+      dta$diab <- factor(dta$diab,
+                         labels = c("No",
+                                    "Yes"))
+      pal <- c("No" = "#E41A1C", 
+               "Yes" = "#377EB8")
+    } else if(tolower(rsk) %in% "smoker"){
+      dta$smoker <- factor(dta$smoker,
+                         labels = c("-1",
+                                    "No",
+                                    "Yes"))
+      pal <- c("-1" = "#FFFFFF",
+               "No" = "#E41A1C", 
+               "Yes" = "#377EB8")
+    } else if(tolower(rsk) %in% "matage"){
+      dta$matage <- factor(dta$matage,
+                           labels = c("Age < 35",
+                                      "Age \u2265 35"))
+      pal <- c("Age < 35" = "#E41A1C", 
+               "Age \u2265 35" = "#377EB8")
     }
   }
   
-  plotly::plot_ly(data = dta[order(BrthYear)],
+  plotly::plot_ly(data = dta[!get(rsk) %in% "-1"][order(BrthYear)],
                   x = ~BrthYear,
                   y = ~.data[[var]],
                   type = "scatter",
@@ -186,7 +229,7 @@ plot_risk_line <- function(data, var, risk){
                   colors = pal,
                   symbol = ~.data[[rsk]],
                   hovertemplate = ~paste(
-                    "<b>", cd_full, "-", .data[[rsk]], "-", BrthYear, "</b>",
+                    "<b>", cd_full, "-", BrthYear, "<br>", .data[[rsk]], "</b>",
                     "<br> Total reported cases:",
                     ifelse(total_cases < 5,
                            "< 5",
@@ -217,7 +260,8 @@ plot_risk_line <- function(data, var, risk){
       #showlegend = FALSE,
       legend = list(
         orientation = "h",
-        y = -0.25, x = 0.35,
+        y = -0.35, x = 0.5,
+        xanchor = "center", yanchor = "middle",
         font = list(
           size = 12,
           face = "bold"

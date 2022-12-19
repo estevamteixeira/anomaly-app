@@ -29,7 +29,7 @@ ui <- function(id){
   # prefix all ids with a string
   ns <- NS(id)
   
-  introBox(data.step = 9, data.intro = consts$intro$text[9],
+  introBox(data.step = 8, data.intro = consts$intro$text[8],
   box(
     title = "Data Sources",
     status = "primary",

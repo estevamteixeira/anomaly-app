@@ -30,7 +30,7 @@ ui <- function(id){
   # "namespacing" function, that will 
   # prefix all ids with a string
   ns <- NS(id)
-  introBox(data.step = 7, data.intro = consts$intro$text[7],
+  
   box(
     title = "Surveillance Over Time",
     status = "primary",
@@ -39,21 +39,21 @@ ui <- function(id){
     width = 12,
     fluidRow(
       column(width = 3,
-        introBox(data.step = 8, data.intro = consts$intro$text[8],
-             selectInput(
+             introBox(data.step = 7, data.intro = consts$intro$text[7],
+        selectInput(
                inputId = ns("line_risk"),
                label = shiny::HTML(
                  "<p><span style='color: #008d8b'>Risk Factor</span></p>" 
                ),
                choices = c("None" = "0",
-                           "Phenotypical Sex" = "SexNum"),
+                           consts$risk_opts),
                selected = c("0"))
              ))),
     # This looks the same as your usual piece of code, 
     # except that the id is wrapped into 
     # the ns() function we defined before
     plotly::plotlyOutput(ns("countyline"))
-    ))
+    )
 }
 
 
@@ -101,7 +101,8 @@ init_server <- function(id, df, y1, y2, q){
             merge(consts$cd_names, by = c("CD_UID")) %>%
             .[, .(CD_UID, cd_full, BrthYear, total_cases,
                   total_lvb_cd, rate, total_lvb_year)] %>%
-            .[order(-rate)]
+            .[order(-rate)] %>% 
+              unique()
         } else{
           merge(unique(
             getCountyDataByCaseTime(
@@ -135,7 +136,8 @@ init_server <- function(id, df, y1, y2, q){
             merge(consts$cd_names, by = c("CD_UID")) %>%
             .[,c("CD_UID", "cd_full", "BrthYear", "total_cases",
                  "total_lvb_cd", "rate", "total_lvb_year")] %>%
-            .[order(-rate)]
+            .[order(-rate)] %>% 
+            unique()
         }
     } else{
       if(is.null(q()) || q() %in% "0"){
@@ -161,7 +163,8 @@ init_server <- function(id, df, y1, y2, q){
                                                                 na.rm = TRUE)),
                                      by = c("BrthYear")
                                    ]),
-            by = c("CD_UID", "BrthYear"))[,
+            by = c("CD_UID", "BrthYear"),
+            allow.cartesian = TRUE)[,
                                          `:=` (rate = 1000*total_cases/total_lvb_cd),
                                          by = c("CD_UID", "BrthYear", line_risk())
             ][
@@ -170,7 +173,8 @@ init_server <- function(id, df, y1, y2, q){
             merge(consts$cd_names, by = c("CD_UID")) %>%
             .[, c("CD_UID", "cd_full", "BrthYear", line_risk(),
                   "total_cases", "total_lvb_cd", "rate","total_lvb_year")] %>%
-            .[order(-rate)]
+            .[order(-rate)] %>% 
+          unique()
         } else{
           merge(unique(
             getCountyDataByCaseRiskTime(df,
@@ -203,7 +207,8 @@ init_server <- function(id, df, y1, y2, q){
             merge(consts$cd_names, by = c("CD_UID")) %>%
             .[,c("CD_UID", "cd_full", "BrthYear", line_risk(),
                  "total_cases", "total_lvb_cd", "rate", "total_lvb_year")] %>%
-            .[order(-rate)]
+            .[order(-rate)] %>% 
+            unique()
         }
       }
     })

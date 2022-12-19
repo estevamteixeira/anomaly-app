@@ -45,26 +45,26 @@ intro <- read.csv("data/intro.csv")
 
 # Import shapefiles
 # Convert them to 'data.tables' by reference
-# csd_shp <- data.table::setDT(cancensus::get_census(
-#   dataset = "CA21",
-#   regions = list(PR = "12"), 
-#   level = "CSD",
-#   geo_format = "sf",
-#   api_key = key
-# ))[,`:=` (
-#   csd_type = data.table::fcase(
-#     tolower(stringr::str_extract(name, "\\(([^()]*)\\)$")) %in% "(iri)" , "Indian reserve",
-#     tolower(stringr::str_extract(name, "\\(([^()]*)\\)$")) %in% "(md)" , "Municipal district",
-#     tolower(stringr::str_extract(name, "\\(([^()]*)\\)$")) %in% "(rgm)" , "Regional municipality",
-#     tolower(stringr::str_extract(name, "\\(([^()]*)\\)$")) %in% "(rm)" , "Rural municipality",
-#     tolower(stringr::str_extract(name, "\\(([^()]*)\\)$")) %in% "(sc)" , "Subdivision of county municipality",
-#     tolower(stringr::str_extract(name, "\\(([^()]*)\\)$")) %in% "(t)" , "Town"
-#   ),
-#   name = stringr::str_remove(name, "\\(([^()]*)\\)$"))][,
-#        c("GeoUID","CD_UID","CMA_UID", "name","csd_type", 
-#        #"Dwellings 2016", "Dwellings", "Population 2016", "Population",  
-#        #"Households 2016", "Households", "Shape Area",
-#        "geometry")]
+csd_shp <- data.table::setDT(cancensus::get_census(
+  dataset = "CA21",
+  regions = list(PR = "12"),
+  level = "CSD",
+  geo_format = "sf",
+  api_key = key
+))[,`:=` (
+  csd_type = data.table::fcase(
+    tolower(stringr::str_extract(name, "\\(([^()]*)\\)$")) %in% "(iri)" , "Indian reserve",
+    tolower(stringr::str_extract(name, "\\(([^()]*)\\)$")) %in% "(md)" , "Municipal district",
+    tolower(stringr::str_extract(name, "\\(([^()]*)\\)$")) %in% "(rgm)" , "Regional municipality",
+    tolower(stringr::str_extract(name, "\\(([^()]*)\\)$")) %in% "(rm)" , "Rural municipality",
+    tolower(stringr::str_extract(name, "\\(([^()]*)\\)$")) %in% "(sc)" , "Subdivision of county municipality",
+    tolower(stringr::str_extract(name, "\\(([^()]*)\\)$")) %in% "(t)" , "Town"
+  ),
+  name = stringr::str_remove(name, "\\(([^()]*)\\)$"))][,
+       c("GeoUID","CD_UID","CMA_UID", "name","csd_type",
+       "Dwellings 2016", "Dwellings", "Population 2016", "Population",
+       "Households 2016", "Households", "Shape Area",
+       "geometry")]
 
 cd_shp <- data.table::setDT(cancensus::get_census(
   dataset = "CA21",
@@ -131,6 +131,14 @@ metrics_list <- list(
 )
 
 icd10_opts <- c(unique(levels(cd_anom$cat_tier2)))
+
+risk_opts <- sort(c("SexNum","matage","smoker","bmipp","diab","Cannabis_Use"))
+names(risk_opts) <- c("BMI",
+                      "Cannabis Use",
+                      "Diabetes",
+                      "Maternal Age",
+                      "Phenotypical Sex",
+                      "Smoking Use")
 
 rcp_logo <- tags$a(
   href = rcp_website,
