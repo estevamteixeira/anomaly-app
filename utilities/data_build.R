@@ -12,6 +12,19 @@ dta <- readr::read_csv("H:\\RCP\\RCP_Data\\TeixeiEC\\NSAtleePD\\data\\NSAtleePD.
 
 pccf <- read.csv("H:\\RCP\\RCP_Data\\TeixeiEC\\PCCF.csv")
 
+hlth <- haven::read_sas("H:\\RCP\\RCP_Data\\Prod\\Geocodes\\Data\\hlthout.sas7bdat"#, n_max = 5
+)
+
+hlth <- setDT(hlth) %>% 
+  .[substr(ID, 1, 1) %in% 1] %>% 
+  .[,`:=` (CONTCTID = as.numeric(substr(ID, 10,15)))] %>% 
+  .[order(CONTCTID)]
+
+dta <- merge(dta,
+             hlth[,.(CONTCTID,CSDuid)],
+             by = c("CONTCTID"),
+             all.x = TRUE)
+
 ## get urban CSDUID (area type)
 ## RuralUrbanFlag: All regions and regional aggregates outside census 
 ## metropolitan areas/census agglomerations were coded as rural.
@@ -169,31 +182,68 @@ anom_l = anom %>%
                   grepl("^Q99", Diags) ~ "Other chromosome abnormalities, not elsewhere classified"
                 ),
                 cat_tier2 = ifelse(nchar(Diags) > 3,
-                                   paste0(substr(Diags,1,3),
+                                   paste0("(",substr(Diags,1,3),")",
                                           " - ",
                                           cat_tier2),
-                                   paste0(Diags,
+                                   paste0("(",Diags,")",
                                           " - ",
                                           cat_tier2)),
-                sentinel = dplyr::case_when(
-                  grepl("^Q390", Diags) ~ "Atresia of oesophagus without fistula",
-                  grepl("^Q428", Diags) ~ "Congenital absence, atresia and stenosis of other parts of large intestine",
-                  grepl("^Q423", Diags) ~ "Congenital absence, atresia and stenosis of anus without fistula",
-                  grepl("^Q792", Diags) ~ "Exomphalus",
-                  grepl("^Q00|Q05", Diags) ~ "Anencephaly / Spina bifida",
-                  grepl("^Q03", Diags) ~ "Congenital hydrocephalus",
-                  grepl("^Q793", Diags) ~ "Gastroschisis",
-                  grepl("^Q212", Diags) ~ "Atrioventricular septal defect",
-                  grepl("^Q213", Diags) ~ "Tetralogy of Fallot",
-                  grepl("^Q203", Diags) ~ "Transposition of great vessels",
-                  grepl("^Q234", Diags) ~ "Hypoplastic left heart syndrome",
-                  grepl("^Q71|Q72|Q73", Diags) ~ "Limb reduction defects",
-                  grepl("^Q65", Diags) ~ "Congenital deformities of hip",
-                  grepl("^Q35|Q36", Diags) ~ "cleft palate / Cleft lip",
-                  grepl("^Q600|Q601", Diags) ~ "Renal agenesis",
-                  grepl("^Q54|Q64", Diags) ~ "Hypospadias / Epispadias",
-                  grepl("^Q90", Diags) ~ "Down's syndrome",
-                  TRUE ~ "Other"
+                cat_tier3 = dplyr::case_when(
+                  grepl("^Q000$|Q0000$|Q01|Q05|Q760", Diags) ~ "Neural tube defects",
+                  grepl("^Q02|Q03|Q041|Q042", Diags) ~ "Selected central nervous system defects",
+                  grepl("^Q110|Q11$|Q111|Q112|Q160|Q172|Q16$|Q17$|Q30", Diags) ~ "Selected sense organ defects",
+                  grepl("^Q200|Q20$|Q203|Q212|Q213|Q234|Q251", Diags) ~ "Selected congenital heart defects",
+                  grepl("^Q35|Q36|Q37", Diags) ~ "Oro-facial clefts",
+                  grepl("^Q39[0-4]|Q41|Q42[0-3]|Q431|Q442", Diags) ~ "Selected gastrointestinal defects",
+                  grepl("^Q53[1-2]|Q539|Q54|Q56|Q640", Diags) ~ "Selected genital anomalies",
+                  grepl("^Q60[0-2]|Q61[1-5]|Q61[8-9]|Q64[1-3]", Diags) ~ "Selected urinary tract defects",
+                  grepl("^Q65", Diags) ~ "Hip dysplasia",
+                  grepl("^Q71[4-9]|Q72[4-9]|Q738", Diags) ~ "Limb deficiency defects",
+                  grepl("^Q79[2-3]", Diags) ~ "Selected abdominal wall defects",
+                  grepl("^Q909|Q90$|Q91[4-7]|Q91[0-3]|Q96", Diags) ~ "Selected chromosomal defects",
+                  TRUE ~ NA_character_
+                ),
+                cat_tier4 = dplyr::case_when(
+                  grepl("^Q000$|Q0000$", Diags) ~ "(Q00) - Anencephaly and similar malformations",
+                  grepl("^Q01", Diags) ~ "(Q01) - Encephalocele",
+                  grepl("^Q05|Q760", Diags) ~ "(Q05, Q76.0) - Spina bifida",
+                  grepl("^Q02", Diags) ~ "(Q02) - Microcephaly",
+                  grepl("^Q03", Diags) ~ "(Q03) - Congenital hydrocephalus",
+                  grepl("^Q041|Q042", Diags) ~ "(Q04.1, Q04.2) - Arhinencephaly / Holoprosencephaly",
+                  grepl("^Q110|Q11$|Q111|Q112", Diags) ~ "(Q11.0-Q11.2) - Anophtalmos / Microphtalmos",
+                  grepl("^Q160|Q172|Q16$|Q17$", Diags) ~ "(Q16.0, Q17.2) - Anotia / Microtia",
+                  grepl("^Q30", Diags) ~ "(Q30) - Choanal atresia",
+                  grepl("^Q200|Q20$", Diags) ~ "(Q20.0) - Commom truncus",
+                  grepl("^Q203", Diags) ~ "(Q20.30-Q20.32, Q20.38) - Discordant ventriculoarterial connection",
+                  grepl("^Q212", Diags) ~ "(Q21.2) - Atrioventricular septal defect",
+                  grepl("^Q213", Diags) ~ "(Q21.3) - Tetralogy of Fallot",
+                  grepl("^Q234", Diags) ~ "(Q23.4) - Hypoplastic left heart syndrome",
+                  grepl("^Q251", Diags) ~ "(Q25.1) - Coarctation of aorta",
+                  grepl("^Q35", Diags) ~ "(Q35) - Cleft palate",
+                  grepl("^Q36", Diags) ~ "(Q36) - Cleft lip",
+                  grepl("^Q37", Diags) ~ "(Q37) - Cleft palate with cleft lip",
+                  grepl("^Q39[0-4]", Diags) ~ "(Q39.0-Q39.4) - Oesophageal atresia / stenosis, tracheoesophageal fistula",
+                  grepl("^Q41", Diags) ~ "(Q41) - Small intestine absence / atresia / stenosis",
+                  grepl("^Q42[0-3]", Diags) ~ "(Q42.0-Q42.3) - Ano-rectal absence / atresia / stenosis",
+                  grepl("^Q431", Diags) ~ "(Q43.1) - Hirschsprung disease",
+                  grepl("^Q442", Diags) ~ "(Q44.2) - Atresia of bile ducts",
+                  grepl("^Q53[1-2]|Q539", Diags) ~ "(Q53.1, Q53.2, Q53.9) - Cryptorchidism / undescended testicles",
+                  grepl("^Q54", Diags) ~ "(Q54, excluding Q54.4) - Hypospadias",
+                  grepl("^Q56", Diags) ~ "(Q56) - Indeterminate sex and pseudohermaphroditism",
+                  grepl("^Q640", Diags) ~ "(Q64.0) - Epispadias",
+                  grepl("^Q60[0-2]", Diags) ~ "(Q60.0-Q60.2) - Renal agenesis",
+                  grepl("^Q61[1-5]|Q61[8-9]", Diags) ~ "(Q61.1-Q61.5, Q61.8, Q61.9) - Cystic kidney",
+                  grepl("^Q641", Diags) ~ "(Q64.1) - Bladder and cloacal exstrophy",
+                  grepl("^Q64[2-3]", Diags) ~ "(Q64.2, Q64.3) - Lower urinary tract obstruction",
+                  grepl("^Q65", Diags) ~ "(Q65) - Hip dysplasia",
+                  grepl("^Q71[4-9]|Q72[4-9]|Q738", Diags) ~ "(Q71.4-Q71.9, Q72.4-Q72.9, Q73.8, excluding Q71.6, Q71.7, Q72.7) - Limb deficiency defects",
+                  grepl("^Q792", Diags) ~ "(Q79.2) - Omphalocele / Exomphalos",
+                  grepl("^Q793", Diags) ~ "(Q79.3) - Gastroschisis",
+                  grepl("^Q909|Q90$", Diags) ~ "(Q90.9) - Down Syndrome",
+                  grepl("^Q91[4-7]", Diags) ~ "(Q91.4-Q91.7) - Trisomy 13 - Patau",
+                  grepl("^Q91[0-3]", Diags) ~ "(Q91.0-Q91.3) - Trisomy 18 - Edwards",
+                  grepl("^Q96", Diags) ~ "(Q96) - Turner syndrome",
+                  TRUE ~ NA_character_
                 ),
                 SexNum = dplyr::case_when(
                   SexNum %in% 1 ~ "M",
@@ -202,7 +252,7 @@ anom_l = anom %>%
                 )) %>%
   dplyr::select("CaseID", "Post_Code", "Prov_Birth","Prov_res","SGC_Res",
                 "Birth_Date","BrthYear","Mat_DoB","DeathD8","OutcomeNum","BWNum", "GANum","Diags","SexNum",
-                "Diags","cat_tier1", "cat_tier2","sentinel", "SrceIDs") %>%
+                "Diags","cat_tier1", "cat_tier2","cat_tier3", "cat_tier4", "SrceIDs") %>%
   unique() %>%
   setDT() %>%
   # .[, `:=` (pst.count_anom = .N), by = list(BrthYear, Post_Code, Diags)] %>%
@@ -240,7 +290,7 @@ anom_l$idx_anom <- 1:nrow(anom_l)
 #--------------------------------------------------------------------------------
 
 dta_nom <- dta[,.(
-  BIRTHID, CONTCTID, MOTHERID, DLPSTCOD, CountyNo,
+  BIRTHID, CONTCTID, MOTHERID, DLPSTCOD, CountyNo, CSDuid,
   DLCOUNTY, SACtype,BTBRTHOR,BTBrthDT, BrthYear, BTDethDT,
   BTOUTCOM, DLHSPDHA, DLHosp, BIRTHWT, GA_BEST,
   # Phenotypic sex
@@ -389,12 +439,12 @@ dta_nom <- dta[,.(
     default = 0
   ))] %>%
   .[, `:=` (bmipp = fcase(
-     PrePBMI < 18.5, 1,
-    18.5 <= PrePBMI & PrePBMI < 25, 2,
-    25 <= PrePBMI & PrePBMI < 30, 3,
-    # 30 <= PrePBMI & PrePBMI < 35, 3,
+     PrePBMI < 30, 1,
+    # 18.5 <= PrePBMI & PrePBMI < 25, 2,
+    # 25 <= PrePBMI & PrePBMI < 30, 3,
+     30 <= PrePBMI & PrePBMI < 40, 2,
     # 35 <= PrePBMI & PrePBMI < 40, 4,
-    PrePBMI >= 30, 4,
+    PrePBMI >= 40, 3,
     default = -1
   ))] %>%
   .[, smk := rowSums(.SD, na.rm = TRUE), .SDcols = c("ADMITSMK", "DLVS1SMK", "SMOKE_20")] %>%
@@ -570,13 +620,14 @@ dta_nom <- dta[,.(
   #                "Urban",
   #                "Rural")
   )] %>% 
-  .[, `:=` (cd.count_dlv = .N), by = list(BrthYear, CD_UID, dlv)] %>%
+  # .[, `:=` (cd.count_dlv = .N), by = list(BrthYear, CD_UID, dlv)] %>%
   unique()
 
 ## It seems that some CountyNo do not have a match when looking into pccf
 ## let's fix this:
 ## 1 - match postal codes and compare CountyNo with CDUID
-## 2- for those that are missing and different keep CDUID from pccf
+## 2 - for those that are missing and different keep CDUID from pccf
+## 3 - for those that couldn't be matched, keep CD_UID from dta_nom
 
 dta1 <- unique(merge(dta_nom[,.(BIRTHID, DLPSTCOD, CD_UID)],
               setDT(pccf)[,.(Postal_Code, CDUID)],
@@ -608,14 +659,21 @@ dta1 <- dta1[idx %in% 0]
 ## If IDs are different, the one from 'pccf' should prevail
 
 dta1 <- dta1[,`:=` (CD_UID = CDUID)]
+dta1 <- rbind(dta1,dta2)[order(BIRTHID)]
+dta_nom <- dta_nom[order(BIRTHID)][,CD_UID := NULL]
+dta_nom$CD_UID <- dta1$CD_UID
   
-  
-# Counting births by county ID, birth year
-cd_lvb <- dta_nom[,.(CD_UID, BrthYear, dlv)] %>% 
-  .[, `:=` (cd.count_dlv = .N), by = list(BrthYear, CD_UID, dlv)] %>%
-  .[order(BrthYear, CD_UID, dlv)] %>% 
+cd_lvb <- dta_nom[,.(BIRTHID, CONTCTID, MOTHERID, DLPSTCOD,
+                     CD_UID, CSDuid, BrthYear, dlv, BTSEX, bmipp, Cannabis_Use,
+                     diab, smoker, matage, Alcohol_Use)] %>% 
+  # .[, `:=` (cd.count_dlv = .N), by = list(BrthYear, CD_UID, dlv)] %>%
+  # .[order(BrthYear, CD_UID, dlv)] %>% 
   unique() %>% 
-  .[!is.na(CD_UID)]
+  .[!is.na(CD_UID) &
+    !is.na(DLPSTCOD)] %>% 
+  .[,`:=` (area = fifelse(CSDuid %in% urb,
+                          "Urban",
+                          "Rural"))]
 cd_lvb$idx_cdlvb <- 1:nrow(cd_lvb)
 
 ## Bring Atlee information to patients with anomaly
@@ -639,8 +697,8 @@ dta_anom <- merge(anom_l,
                   all.x = TRUE) %>%
   .[order(idx_anom)] %>%
   .[,c("BIRTHID", "MOTHERID", "CONTCTID", "CaseID", "DLHSPDHA", "DLHosp","BTOUTCOM",
-       "Post_Code", "SGC_Res", "CD_UID", "DLCOUNTY","Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", 
-       "Diags","cat_tier2", "sentinel", "idx_anom", "GA_BEST",
+       "Post_Code", "SGC_Res", "CD_UID", "CSDuid", "DLCOUNTY","Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", 
+       "Diags","cat_tier1","cat_tier2","cat_tier3","cat_tier4", "idx_anom", "GA_BEST",
        "DMMATAGE", "R004_00200","R004_00800", "R004_01300", "MDRUGC",
        "smoker","bmipp","matage","diab", "NASOnly", "NAS_MRDx", "NAS", "Any_OAT", "NASorAny_OAT", 
        "RxOpioid", "OpdAbuse", "MatOpUse", "NOWS", "Rx_w_NAS_Poten", 
@@ -692,8 +750,8 @@ d1 <- merge(anom_l[anom_l$idx_anom %in% d1$idx_anom],
             all.x = TRUE) %>%
   .[order(idx_anom)] %>%
   .[,c("BIRTHID", "MOTHERID", "CONTCTID", "CaseID", "DLHSPDHA", "DLHosp","BTOUTCOM",
-       "Post_Code", "SGC_Res", "CD_UID","DLCOUNTY", "Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", 
-       "Diags","cat_tier2", "sentinel", "idx_anom", "GA_BEST",
+       "Post_Code", "SGC_Res", "CD_UID", "CSDuid", "DLCOUNTY", "Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", 
+       "Diags","cat_tier1","cat_tier2","cat_tier3","cat_tier4", "idx_anom", "GA_BEST",
        "DMMATAGE", "R004_00200","R004_00800", "R004_01300", "MDRUGC",
        "smoker","bmipp","matage","diab", "NASOnly", "NAS_MRDx", "NAS", "Any_OAT", "NASorAny_OAT", 
        "RxOpioid", "OpdAbuse", "MatOpUse", "NOWS", "Rx_w_NAS_Poten", 
@@ -731,8 +789,8 @@ d1 <- merge(anom_l[anom_l$idx_anom %in% d1$idx_anom],
             all.x = TRUE) %>% 
   .[order(idx_anom)] %>%
   .[,c("BIRTHID", "MOTHERID", "CONTCTID", "CaseID", "DLHSPDHA", "DLHosp","BTOUTCOM",
-       "Post_Code", "SGC_Res", "CD_UID","DLCOUNTY", "Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", 
-       "Diags","cat_tier2", "sentinel", "idx_anom", "GA_BEST",
+       "Post_Code", "SGC_Res", "CD_UID", "CSDuid", "DLCOUNTY", "Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", 
+       "Diags","cat_tier1","cat_tier2","cat_tier3","cat_tier4", "idx_anom", "GA_BEST",
        "DMMATAGE", "R004_00200","R004_00800", "R004_01300", "MDRUGC",
        "smoker","bmipp","matage","diab", "NASOnly", "NAS_MRDx", "NAS", "Any_OAT", "NASorAny_OAT", 
        "RxOpioid", "OpdAbuse", "MatOpUse", "NOWS", "Rx_w_NAS_Poten", 
@@ -772,8 +830,8 @@ d1 <- merge(anom_l[anom_l$idx_anom %in% d1$idx_anom],
             all.x = TRUE) %>%
   .[order(idx_anom)] %>%
   .[,c("BIRTHID", "MOTHERID", "CONTCTID", "CaseID", "DLHSPDHA", "DLHosp","BTOUTCOM",
-       "Post_Code", "SGC_Res", "CD_UID","DLCOUNTY", "Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", 
-       "Diags","cat_tier2", "sentinel", "idx_anom", "GA_BEST",
+       "Post_Code", "SGC_Res", "CD_UID", "CSDuid", "DLCOUNTY", "Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", 
+       "Diags","cat_tier1","cat_tier2","cat_tier3","cat_tier4", "idx_anom", "GA_BEST",
        "DMMATAGE", "R004_00200","R004_00800", "R004_01300", "MDRUGC",
        "smoker","bmipp","matage","diab", "NASOnly", "NAS_MRDx", "NAS", "Any_OAT", "NASorAny_OAT", 
        "RxOpioid", "OpdAbuse", "MatOpUse", "NOWS", "Rx_w_NAS_Poten", 
@@ -814,8 +872,8 @@ d1 <- merge(anom_l[anom_l$idx_anom %in% d1$idx_anom],
             all.x = TRUE) %>%
   .[order(idx_anom)] %>%
   .[,c("BIRTHID", "MOTHERID", "CONTCTID", "CaseID", "DLHSPDHA", "DLHosp","BTOUTCOM",
-       "Post_Code", "SGC_Res", "CD_UID","DLCOUNTY", "Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", 
-       "Diags","cat_tier2", "sentinel", "idx_anom", "GA_BEST",
+       "Post_Code", "SGC_Res", "CD_UID", "CSDuid", "DLCOUNTY", "Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", 
+       "Diags","cat_tier1","cat_tier2","cat_tier3","cat_tier4", "idx_anom", "GA_BEST",
        "DMMATAGE", "R004_00200","R004_00800", "R004_01300", "MDRUGC",
        "smoker","bmipp","matage","diab", "NASOnly", "NAS_MRDx", "NAS", "Any_OAT", "NASorAny_OAT", 
        "RxOpioid", "OpdAbuse", "MatOpUse", "NOWS", "Rx_w_NAS_Poten", 
@@ -857,8 +915,8 @@ d1 <- merge(anom_l[anom_l$idx_anom %in% d1$idx_anom],
             all.x = TRUE) %>%
   .[order(idx_anom)] %>%
   .[,c("BIRTHID", "MOTHERID", "CONTCTID", "CaseID", "DLHSPDHA", "DLHosp","BTOUTCOM",
-       "Post_Code", "SGC_Res", "CD_UID","DLCOUNTY","Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", 
-       "Diags","cat_tier2", "sentinel", "idx_anom", "GA_BEST",
+       "Post_Code", "SGC_Res", "CD_UID", "CSDuid", "DLCOUNTY","Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", 
+       "Diags","cat_tier1","cat_tier2","cat_tier3","cat_tier4", "idx_anom", "GA_BEST",
        "DMMATAGE", "R004_00200","R004_00800", "R004_01300", "MDRUGC",
        "smoker","bmipp","matage","diab", "NASOnly", "NAS_MRDx", "NAS", "Any_OAT", "NASorAny_OAT", 
        "RxOpioid", "OpdAbuse", "MatOpUse", "NOWS", "Rx_w_NAS_Poten", 
@@ -881,8 +939,8 @@ d1 <- dta_anom[!dta_anom$idx_anom %in% d2$idx_anom]
 anom_cd <- d2 %>% 
   .[#!is.na(CD_UID)
     ,
-    c("CaseID","BIRTHID","MOTHERID","CONTCTID","CD_UID", "DLCOUNTY","Birth_Date",
-      "BrthYear", "DLHSPDHA", "DLHosp","SGC_Res","SexNum", "Diags","cat_tier2", "sentinel",
+    c("CaseID","BIRTHID","MOTHERID","CONTCTID","CD_UID", "CSDuid", "DLCOUNTY","Birth_Date",
+      "BrthYear", "DLHSPDHA", "DLHosp","SGC_Res","SexNum", "Diags","cat_tier1","cat_tier2","cat_tier3","cat_tier4",
       "GA_BEST", "DMMATAGE", "R004_00200", "R004_00800", 
       "R004_01300", "MDRUGC", "smoker", "bmipp","matage", "diab", 
       "NASOnly", "NAS_MRDx", "NAS", "Any_OAT", "NASorAny_OAT", "RxOpioid", 
@@ -961,7 +1019,9 @@ anom_cd <- d2 %>%
 
 ## export datasets
 
-write.csv(cd_lvb,
+write.csv(setnames(cd_lvb,
+                   old = c("BTSEX", "CSDuid"),
+                   new = c("SexNum", "CSDUID")),
           "H:/RCP/RCP_Data/TeixeiEC/Anomalies/anomaly-app-overview/data/cd_birth.csv")
 
 write.csv(anom_cd,

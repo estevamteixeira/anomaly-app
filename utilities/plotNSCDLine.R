@@ -112,7 +112,7 @@ plot_line <- function(data, var){
   #                           "< 5",
   #                           as.character(scales::comma(total_cases,
   #                                                      accuracy = 1))),
-  #                    "<br> Total total births:",
+  #                    "<br> Total births:",
   #                    ifelse(total_lvb < 5,
   #                           "< 5",
   #                           as.character(scales::comma(total_lvb,
@@ -169,7 +169,7 @@ plot_risk_line <- function(data, var, risk){
   if(any(unique(names(dta) %in% rsk))){
     if(tolower(rsk) %in% "sexnum"){
       dta$SexNum <- factor(dta$SexNum,
-                           levels = levels(dta$SexNum),
+                           levels = c(-1,1,2),
                            labels = c("-1",
                                       "Female",
                                       "Male"))
@@ -179,32 +179,48 @@ plot_risk_line <- function(data, var, risk){
       
     } else if(tolower(rsk) %in% "bmipp"){
       dta$bmipp <- factor(dta$bmipp,
+                          levels = c(-1,1,2,3),
                            labels = c("-1",
-                                      "Underweight (BMI < 18.5)",
-                                      "Normal weight (18.5 \u2264 BMI < 25)",
-                                      "Overweight (25 \u2264 BMI < 30)",
-                                      "Obese (BMI \u2265 30)"))
-      pal <- c("-1" = "#FFFFFF", 
-               "Underweight (BMI < 18.5)" = "#E41A1C",
-               "Normal weight (18.5 \u2264 BMI < 25)" = "#377EB8",
-               "Overweight (25 \u2264 BMI < 30)" = "#4DAF4A",
-               "Obese (BMI \u2265 30)" = "#984ea3")
+                                      "Not Obese (BMI < 30)",
+                                      "Obese I, II (30 \u2264 BMI < 40)",
+                                      "Obese III (BMI \u2265 40)"
+                                      )
+                            # c("-1",
+                            #           "Underweight (BMI < 18.5)",
+                            #           "Normal weight (18.5 \u2264 BMI < 25)",
+                            #           "Overweight (25 \u2264 BMI < 30)",
+                            #           "Obese (BMI \u2265 30)"
+                            #   )
+                          )
+      pal <- c("-1" = "#FFFFFF",
+               "Not Obese (BMI < 30)" = "#E41A1C",
+               "Obese I, II (30 \u2264 BMI < 40)" = "#377EB8",
+               "Obese III (BMI \u2265 40)" = "#4DAF4A"
+      )
+        # c("-1" = "#FFFFFF", 
+        #        "Underweight (BMI < 18.5)" = "#E41A1C",
+        #        "Normal weight (18.5 \u2264 BMI < 25)" = "#377EB8",
+        #        "Overweight (25 \u2264 BMI < 30)" = "#4DAF4A",
+        #        "Obese (BMI \u2265 30)" = "#984ea3")
       
     } else if(tolower(rsk) %in% "cannabis_use"){
       dta$Cannabis_Use <- factor(dta$Cannabis_Use,
-                         labels = c("No",
-                                    "Yes"))
+                                 levels = c(0,1),
+                                 labels = c("No",
+                                            "Yes"))
       pal <- c("No" = "#008D8B", 
                "Yes" = "#E41A1C")
     } else if(tolower(rsk) %in% "diab"){
       dta$diab <- factor(dta$diab,
+                         levels = c(0,1),
                          labels = c("No",
                                     "Yes"))
       pal <- c("No" = "#008D8B", 
                "Yes" = "#E41A1C")
     } else if(tolower(rsk) %in% "smoker"){
       dta$smoker <- factor(dta$smoker,
-                         labels = c("-1",
+                           levels = c(-1,0,1),
+                           labels = c("-1",
                                     "No",
                                     "Yes"))
       pal <- c("-1" = "#FFFFFF",
@@ -212,16 +228,19 @@ plot_risk_line <- function(data, var, risk){
                "Yes" = "#E41A1C")
     } else if(tolower(rsk) %in% "matage"){
       dta$matage <- factor(dta$matage,
+                           levels = c(1,2),
                            labels = c("Age < 35",
                                       "Age \u2265 35"))
       pal <- c("Age < 35" = "#E41A1C", 
                "Age \u2265 35" = "#008D8B")
     } else if(tolower(rsk) %in% "area"){
-      dta$area <- factor(dta$area)
+      dta$area <- factor(dta$area,
+                         level = c("Rural","Urban"))
       pal <- c("Rural" = "#E41A1C", 
                "Urban" = "#008D8B")
     }else if(tolower(rsk) %in% "alcohol_use"){
       dta$Alcohol_Use <- factor(dta$Alcohol_Use,
+                                levels = c(0,1),
                                 labels = c("No",
                                            "Yes"))
       pal <- c("No" = "#E41A1C", 
@@ -299,7 +318,20 @@ plot_risk_line <- function(data, var, risk){
           size = 12
           )
         )
-      )
+      ) %>% 
+    plotly::config(displaylogo = FALSE,
+                   modeBarButtonsToRemove = c(
+                     "select2d",
+                     "zoomIn2D",
+                     "zoomOut2d",
+                     "zoom2d",
+                     "pan2d",
+                     "lasso2d",
+                     "autoScale2d",
+                     "resetScale2d",
+                     "hoverClosestCartesian",
+                     "hoverCompareCartesian"
+                   ))
   
   # p = plotly::ggplotly(
   #   p = {
@@ -314,7 +346,7 @@ plot_risk_line <- function(data, var, risk){
   #                                     "< 5",
   #                                     as.character(scales::comma(total_cases,
   #                                                                accuracy = 1))),
-  #                              "<br> Total total births:",
+  #                              "<br> Total births:",
   #                              ifelse(total_lvb < 5,
   #                                     "< 5",
   #                                     as.character(scales::comma(total_lvb,

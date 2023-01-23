@@ -124,10 +124,26 @@ init_server <- function(id, df, y1, y2, q){
                                       ][,
                                         c("CD_UID","total_lvb")]),
           by = c("CD_UID"))
+      } else if (!q() == "0" &&
+                 is.na(stringr::str_extract(q(), pattern = "\\(.*\\)"))){
+        merge(unique(
+          getCountyDataByCase(df, y1(), y2(), q())[,
+                                                   c("CD_UID", "cat_tier3", "total_cases")
+          ]),
+          unique(getSubsetByTimeRange(consts$cd_birth,
+                                      y1(),
+                                      y2())[tolower(dlv) %in% c("lvb", "stillbirth"),
+                                            c("CD_UID", "cd.count_dlv")
+                                      ][,
+                                        `:=` (total_lvb = sum(cd.count_dlv)),
+                                        by = c("CD_UID")
+                                      ][,
+                                        c("CD_UID","total_lvb")]),
+          by = c("CD_UID"))
       } else{
         merge(unique(
           getCountyDataByCase(df, y1(), y2(), q())[,
-                                                   c("CD_UID", "cat_tier2", "total_cases")
+                                                   c("CD_UID", "cat_tier4", "total_cases")
           ]),
           unique(getSubsetByTimeRange(consts$cd_birth,
                                       y1(),

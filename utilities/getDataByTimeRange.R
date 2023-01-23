@@ -13,10 +13,17 @@ getSubsetByTimeRange <- function(df, y1, y2, q = NULL) {
       subset = data.table::between(BrthYear, y1, y2) #includes boundaries
       # select = colsToSelect
     )
-  } else {
+  } else if (!q == "0" &&
+             is.na(stringr::str_extract(q, pattern = "\\(.*\\)"))){
     subset(
       x = df,
-      subset = data.table::between(BrthYear, y1, y2) & cat_tier2 %in% q
+      subset = data.table::between(BrthYear, y1, y2) & cat_tier3 %in% q
+      # select = colsToSelect
+    )
+    } else {
+    subset(
+      x = df,
+      subset = data.table::between(BrthYear, y1, y2) & cat_tier4 %in% q
       # select = colsToSelect
     )
   }
@@ -25,7 +32,7 @@ getSubsetByTimeRange <- function(df, y1, y2, q = NULL) {
 getCountyData <- function(df, y1, y2) {
   unique(getSubsetByTimeRange(df, y1, y2, q = NULL)[,
                                              c("CaseID","CD_UID", "BrthYear",
-                                               "cat_tier2")
+                                               "cat_tier3","cat_tier4")
   ])[,
       `:=` (total_cases = .N), by = .(CD_UID)
     ]
@@ -42,7 +49,7 @@ sumAllNonNAValues <- function(v) {
 getCountyDataByCase <- function(df, y1, y2, q){
   unique(getSubsetByTimeRange(df, y1, y2, q)[,
                                       c("CaseID","CD_UID", "BrthYear",
-                                        "cat_tier2")
+                                        "cat_tier3","cat_tier4")
   ])[,
     `:=` (total_cases = .N),
     by = .(CD_UID)
@@ -54,7 +61,7 @@ getCountyDataByCaseRisk <- function(df, risk, y1, y2, q){
                                              .SD,
                                              .SDcols =
                                       c("CaseID","CD_UID", "BrthYear",
-                                        "cat_tier2", risk)
+                                        "cat_tier3","cat_tier4", risk)
   ])[,
      `:=` (total_cases = .N),
      by = .(CD_UID, get(risk))
@@ -66,7 +73,7 @@ getCountyDataByRisk <- function(df, risk, y1, y2){
                                                     .SD,
                                                     .SDcols =
                                              c("CaseID","CD_UID", "BrthYear",
-                                               "cat_tier2", risk)
+                                               "cat_tier3","cat_tier4", risk)
                                              ])[,
       `:=` (total_cases = .N),
       by = .(CD_UID, get(risk))
@@ -78,7 +85,7 @@ getCountyDataByRisk <- function(df, risk, y1, y2){
 getCountyDataTime <- function(df, y1, y2) {
   unique(getSubsetByTimeRange(df, y1, y2, q = NULL)[,
                                              c("CaseID","CD_UID", "BrthYear",
-                                               "cat_tier2")
+                                               "cat_tier3","cat_tier4")
   ])[,
      `:=` (total_cases = .N),
      by = .(CD_UID, BrthYear)
@@ -88,7 +95,7 @@ getCountyDataTime <- function(df, y1, y2) {
 getCountyDataByCaseTime <- function(df, y1, y2, q){
   unique(getSubsetByTimeRange(df, y1, y2, q)[,
                                       c("CaseID","CD_UID", "BrthYear",
-                                        "cat_tier2")
+                                        "cat_tier3","cat_tier4")
   ])[,
       `:=` (total_cases = .N),
       by = .(CD_UID, BrthYear)
@@ -100,7 +107,7 @@ getCountyDataRiskTime <- function(df, risk, y1, y2) {
                                                     .SD,
                                                     .SDcols =
                                              c("CaseID","CD_UID", "BrthYear",
-                                               "cat_tier2", risk)
+                                               "cat_tier3","cat_tier4", risk)
   ])[,
                                              `:=` (total_cases = .N),
                                              by = .(CD_UID, BrthYear, get(risk))
@@ -112,7 +119,7 @@ getCountyDataByCaseRiskTime <- function(df, risk, y1, y2, q){
                                              .SD,
                                              .SDcols =
                                       c("CaseID","CD_UID", "BrthYear",
-                                        "cat_tier2", risk)
+                                        "cat_tier3","cat_tier4", risk)
   ])[,
                                       `:=` (total_cases = .N),
                                       by = .(CD_UID, BrthYear, get(risk))

@@ -29,7 +29,7 @@ ui <- function(id){
   # prefix all ids with a string
   ns <- NS(id)
   
-  introBox(data.step = 8, data.intro = consts$intro$text[8],
+  introBox(data.step = 9, data.intro = consts$intro$text[9],
   box(
     title = "Data Sources",
     status = "primary",
@@ -71,12 +71,30 @@ init_server <- function(id, df, y1, y2, q){
                      SrceIDs %in% "5", "MSI",
                      SrceIDs %in% "6", "NeoNatal",
                      SrceIDs %in% "7", "Others")))]
-      } else{
+      } else if (!q() == "0" &&
+                 is.na(stringr::str_extract(q(), pattern = "\\(.*\\)"))){
+        dta <-  unique(
+          getSubsetByTimeRange(df,
+                               y1(),
+                               y2(),
+                               q())[, .(CaseID, BrthYear, cat_tier3, SrceIDs)
+                               ]
+        )[,`:=` (vals = 1,
+                 SrceIDs = factor(
+                   fcase(
+                     SrceIDs %in% "1", "FADB",
+                     SrceIDs %in% "2", "NSAPD",
+                     SrceIDs %in% "3", "Cardio",
+                     SrceIDs %in% "4", "CIHI",
+                     SrceIDs %in% "5", "MSI",
+                     SrceIDs %in% "6", "NeoNatal",
+                     SrceIDs %in% "7", "Others")))]
+      }else{
       dta <-  unique(
           getSubsetByTimeRange(df,
                                y1(),
                                y2(),
-                               q())[, .(CaseID, BrthYear, cat_tier2, SrceIDs)
+                               q())[, .(CaseID, BrthYear, cat_tier4, SrceIDs)
                                ]
         )[,`:=` (vals = 1,
                  SrceIDs = factor(
@@ -252,7 +270,10 @@ init_server <- function(id, df, y1, y2, q){
               y = (nsets - combos[[combono]]) + 1,
               name = setnames[combos[[combono]]]
             )
-          }))
+          }))[,`:=` (idx = .N), by = .(x, name)
+              ][,`:=` (name = ifelse(idx %in% 1,
+                                        paste(name, collapse = " \u2229 "),
+                                        name)), by = .(x)]
         
         plot_ly(
           type = "scatter",
@@ -292,7 +313,8 @@ init_server <- function(id, df, y1, y2, q){
             zeroline = FALSE,
             range = 1:nsets
           ),
-          margin = list(t = 0, b = 0)
+          margin = list(t = 0, b = 0),
+          dragmode = "select"
         ) %>% 
           plotly::style(hoverlabel = list(
             bgcolor  = "black",
@@ -336,7 +358,7 @@ init_server <- function(id, df, y1, y2, q){
             # side = "right"
           ),
           xaxis = list(
-            autorange = "reversed",
+            # autorange = "reversed",
             face = "bold",
             size = 14,
             title = "Set Size"

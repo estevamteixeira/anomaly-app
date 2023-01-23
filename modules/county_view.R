@@ -84,10 +84,42 @@ init_server <- function(id, df, y1, y2, q){
           .[, .(CD_UID, cd_full, total_cases, total_lvb, rate)] %>%
           .[order(-rate)] %>% 
           unique()
+      } else if (!q() == "0" &&
+                 is.na(stringr::str_extract(q(), pattern = "\\(.*\\)"))){
+        merge(unique(
+          getCountyDataByCase(df, y1(), y2(), q())[,
+                                                   c("CD_UID", "cat_tier3", "total_cases")
+          ]),
+          unique(getSubsetByTimeRange(consts$cd_birth,
+                                      y1(),
+                                      y2())[tolower(dlv) %in% c("lvb", "stillbirth"),
+                                            c("CD_UID", "cd.count_dlv")
+                                      ][,
+                                        `:=` (total_lvb = sum(cd.count_dlv,
+                                                              na.rm = TRUE)),
+                                        by = c("CD_UID")
+                                      ]),
+          by = c("CD_UID"))[,
+                            `:=` (rate = 1000*total_cases/total_lvb),
+                            by = c("CD_UID")
+          ][
+            order(-rate)
+          ][,
+            `:=` (total_cases = ifelse(total_cases < 5,
+                                       "< 5",
+                                       as.character(scales::comma(total_cases, accuracy = 1))),
+                  total_lvb = ifelse(total_lvb < 5,
+                                     "< 5",
+                                     as.character(scales::comma(total_lvb, accuracy = 1))))
+          ] %>%
+          merge(consts$cd_names, by = c("CD_UID")) %>%
+          .[,c("CD_UID", "cd_full", "total_cases", "total_lvb", "rate")] %>%
+          .[order(-rate)] %>% 
+          unique()
       } else{
         merge(unique(
           getCountyDataByCase(df, y1(), y2(), q())[,
-                                                   c("CD_UID", "cat_tier2", "total_cases")
+                                                   c("CD_UID", "cat_tier4", "total_cases")
                                                    ]),
               unique(getSubsetByTimeRange(consts$cd_birth,
                                           y1(),
@@ -166,7 +198,15 @@ init_server <- function(id, df, y1, y2, q){
           pageLength = 6,
           ordering = TRUE,
           stateSave = TRUE,
-          buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
+          buttons = list('copy', 'print', list(
+            extend = 'collection',
+            buttons = list(
+              list(extend = 'csv', filename = "trend_results"),
+               list(extend = 'excel', filename = "trend_results"),
+               list(extend = 'pdf', filename = "trend_results")
+            ),
+            text = 'Download'
+          )),
           columnDefs = list(list(visible = FALSE,
                                  targets = c(0)))
           # language = list(zeroRecords = "")

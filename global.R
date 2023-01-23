@@ -16,7 +16,6 @@ library(shinydashboard)
 library(shinyjs)
 library(tidyverse)
 
-
 # Modules
 map_view <- use("modules/map_view.R")
 global_metrics_view <- use("modules/global_metrics_view.R")

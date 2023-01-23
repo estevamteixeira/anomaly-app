@@ -98,6 +98,7 @@
 .line-grid-wrapper,
 .barchart-grid-wrapper {
   > div {
+    position: flex;
     height: 100%;
     padding: 0;
   }

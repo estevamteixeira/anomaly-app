@@ -22,7 +22,7 @@ plot_map <- function(data, var, y1, y2){
                    "<b>",stringr::str_to_title(dta[["name"]]),"</b>",
                    # "<br>Census ID:", dta[["GeoUID"]],
                    "<br>Reported occurences:", dta[[which(grepl("total_cases",names(dta)))]],
-                   "<br>Total total births:", dta[[which(grepl("total_lvb",names(dta)))]],
+                   "<br>Total births:", dta[[which(grepl("total_lvb",names(dta)))]],
                    "<br>Prevalence (*cases per 1,000 total births):" , scales::comma(dta[[var]], accuracy = 0.1)
                  )
   ) |> lapply(htmltools::HTML)
@@ -31,7 +31,7 @@ plot_map <- function(data, var, y1, y2){
   map <- leaflet::leaflet(dta, padding = 0,
               # trying to focus the map
               # default = 7
-                          options = leafletOptions(minZoom = 7)) |>
+                          options = leafletOptions(minZoom = 6.45)) |>
     # leaflet::addProviderTiles("CartoDB") |> 
     leaflet::addPolygons(
       stroke = TRUE,
@@ -54,7 +54,18 @@ plot_map <- function(data, var, y1, y2){
                      padding = "3px 8px"
                      ),
         textsize = "15px",
-        direction = "auto"))
+        direction = "auto")) 
+    # leaflet::addLegend(
+    #         pal = pal,
+    #         values = ~dta[[var]],
+    #         # labFormat = labelFormat(
+    #         #   suffix = "Not informed",
+    #         #   between = "\n"),
+    #         opacity = 1,
+    #         title = ~ifelse(y1 == y2, y1, paste(y1,"-",y2)),
+    #         position = "bottomright",
+    #         na.label = "Not informed"
+    #       )
   
   # if(all(is.na(dta[[var]]))){
   #   map |> 
