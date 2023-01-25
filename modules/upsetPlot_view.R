@@ -59,7 +59,8 @@ init_server <- function(id, df, y1, y2, q){
        dta <- unique(
           getSubsetByTimeRange(df,
                               y1(),
-                              y2())[, .(CaseID, BrthYear, Diags, cat_tier2, SrceIDs)
+                              y2())[, .(CaseID, BrthYear, 
+                                        Diags, SrceIDs)
                               ]
         )[,`:=` (vals = 1,
                  SrceIDs = factor(
@@ -77,7 +78,8 @@ init_server <- function(id, df, y1, y2, q){
           getSubsetByTimeRange(df,
                                y1(),
                                y2(),
-                               q())[, .(CaseID, BrthYear, cat_tier3, SrceIDs)
+                               q())[, .(CaseID, BrthYear,
+                                        cat_tier3, SrceIDs)
                                ]
         )[,`:=` (vals = 1,
                  SrceIDs = factor(
@@ -94,7 +96,8 @@ init_server <- function(id, df, y1, y2, q){
           getSubsetByTimeRange(df,
                                y1(),
                                y2(),
-                               q())[, .(CaseID, BrthYear, cat_tier4, SrceIDs)
+                               q())[, .(CaseID, BrthYear,
+                                        cat_tier4, SrceIDs)
                                ]
         )[,`:=` (vals = 1,
                  SrceIDs = factor(
@@ -280,7 +283,7 @@ init_server <- function(id, df, y1, y2, q){
           mode = "markers",
           marker = list(color = consts$colors$ash_light,
                         size = 5)
-        ) %>% add_trace(
+        ) %>% add_trace( ## grey dots background
           type = "scatter",
           x = rep(1:nintersections,
                   length(selected_sets)),
@@ -289,7 +292,7 @@ init_server <- function(id, df, y1, y2, q){
           hoverinfo = "none",
           marker = list(color = consts$colors$ash_light,
                         size = 5)
-        ) %>% add_trace(
+        ) %>% add_trace( ## green dots - sets
           type = "scatter",
           data = group_by(lines, combo),
           mode = "lines+markers",

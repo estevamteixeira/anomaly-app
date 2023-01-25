@@ -200,7 +200,7 @@ anom_l = anom %>%
                   grepl("^Q65", Diags) ~ "Hip dysplasia",
                   grepl("^Q71[4-9]|Q72[4-9]|Q738", Diags) ~ "Limb deficiency defects",
                   grepl("^Q79[2-3]", Diags) ~ "Selected abdominal wall defects",
-                  grepl("^Q909|Q90$|Q91[4-7]|Q91[0-3]|Q96", Diags) ~ "Selected chromosomal defects",
+                  grepl("^Q90|Q91[4-7]|Q91[0-3]|Q96", Diags) ~ "Selected chromosomal defects",
                   TRUE ~ NA_character_
                 ),
                 cat_tier4 = dplyr::case_when(
@@ -239,7 +239,7 @@ anom_l = anom %>%
                   grepl("^Q71[4-9]|Q72[4-9]|Q738", Diags) ~ "(Q71.4-Q71.9, Q72.4-Q72.9, Q73.8, excluding Q71.6, Q71.7, Q72.7) - Limb deficiency defects",
                   grepl("^Q792", Diags) ~ "(Q79.2) - Omphalocele / Exomphalos",
                   grepl("^Q793", Diags) ~ "(Q79.3) - Gastroschisis",
-                  grepl("^Q909|Q90$", Diags) ~ "(Q90.9) - Down Syndrome",
+                  grepl("^Q90", Diags) ~ "(Q90) - Down Syndrome",
                   grepl("^Q91[4-7]", Diags) ~ "(Q91.4-Q91.7) - Trisomy 13 - Patau",
                   grepl("^Q91[0-3]", Diags) ~ "(Q91.0-Q91.3) - Trisomy 18 - Edwards",
                   grepl("^Q96", Diags) ~ "(Q96) - Turner syndrome",
@@ -673,7 +673,12 @@ cd_lvb <- dta_nom[,.(BIRTHID, CONTCTID, MOTHERID, DLPSTCOD,
     !is.na(DLPSTCOD)] %>% 
   .[,`:=` (area = fifelse(CSDuid %in% urb,
                           "Urban",
-                          "Rural"))]
+                          "Rural"),
+           BTSEX = dplyr::case_when(
+             BTSEX %in% "M" ~ 1,
+             BTSEX %in% "F" ~ 2,
+             TRUE ~ -1
+           ))]
 cd_lvb$idx_cdlvb <- 1:nrow(cd_lvb)
 
 ## Bring Atlee information to patients with anomaly
@@ -1015,7 +1020,12 @@ anom_cd <- d2 %>%
                              "67" = 'Valley Regional',
                              "85" = 'QE II - All Sites',
                              "86" = 'IWK Grace',
-                             "87" = 'New C.B. Regional')))]
+                             "87" = 'New C.B. Regional')),
+           SexNum = dplyr::case_when(
+             SexNum %in% "M" ~ 1,
+             SexNum %in% "F" ~ 2,
+             TRUE ~ -1
+           ))]
 
 ## export datasets
 

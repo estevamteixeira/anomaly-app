@@ -74,26 +74,34 @@ init_server <- function(id, df, y1, y2, q){
       
     if(line_risk() %in% "0"){
       if(is.null(q()) || q() %in% "0"){
-          merge(unique(
-            getCountyDataTime(df,
-                              y1(),
-                              y2())[, c("CD_UID", "BrthYear","total_cases")
-                                    ]),
+          merge(
             unique(
-              unique(getSubsetByTimeRange(consts$cd_birth,
-                                   y1(),
-                                   y2())[tolower(dlv) %in% c("lvb", "stillbirth"),
-                                         c("CD_UID", "BrthYear", "dlv")
-                                         ][, `:=` (cd.count_dlv = .N),
-                                           by = list(BrthYear, CD_UID, dlv)
-                                            ])[,
-                                          `:=` (total_lvb_cd = sum(cd.count_dlv,
-                                                                   na.rm = TRUE)),
-                                          by = c("CD_UID","BrthYear")
-                                        ]),
-            by = c("CD_UID", "BrthYear"))[,
-                                         `:=` (rate = 1000*total_cases/total_lvb_cd),
-                                         by = c("CD_UID", "BrthYear")
+              getCountyDataTime(df,
+                                y1(),
+                                y2())[, c("CD_UID", "BrthYear","total_cases")
+                                      ]),
+            unique(
+              unique(
+                getSubsetByTimeRange(
+                  consts$cd_birth,
+                  y1(),
+                  y2())[tolower(dlv) %in% c("lvb", "stillbirth"),
+                        c("CD_UID", "BrthYear", "dlv")
+                        ][, `:=` (cd.count_dlv = .N),
+                          by = list(BrthYear, CD_UID, dlv)
+                          ])[,
+                             `:=` (total_lvb_cd = sum(cd.count_dlv,
+                                                      na.rm = TRUE)),
+                             by = c("CD_UID","BrthYear")
+                             ][,
+                               c("CD_UID", "BrthYear", "total_lvb_cd")
+                               ]),
+            by = c("CD_UID", "BrthYear"),
+            all.y = TRUE,
+            allow.cartesian = TRUE
+            )[,
+              `:=` (rate = 1000*total_cases/total_lvb_cd),
+              by = c("CD_UID", "BrthYear")
             ][
               order(-rate)
             ] %>%
@@ -104,19 +112,21 @@ init_server <- function(id, df, y1, y2, q){
               unique()
         } else if (!q() == "0" &&
                    is.na(stringr::str_extract(q(), pattern = "\\(.*\\)"))){
-          merge(unique(
-            getCountyDataByCaseTime(
-              df,
-              y1(),
-              y2(),
-              q())[,
-                   c("CD_UID", "BrthYear","cat_tier3", "total_cases")
+          merge(
+            unique(
+              getCountyDataByCaseTime(
+                df,
+                y1(),
+                y2(),
+                q())[,
+                     c("CD_UID", "BrthYear","cat_tier3", "total_cases")
               ]),
             unique(
-              unique(getSubsetByTimeRange(
-                consts$cd_birth,
-                y1(),
-                y2())[tolower(dlv) %in% c("lvb", "stillbirth"),
+              unique(
+                getSubsetByTimeRange(
+                  consts$cd_birth,
+                  y1(),
+                  y2())[tolower(dlv) %in% c("lvb", "stillbirth"),
                       c("CD_UID", "BrthYear", "dlv")
                       ][, `:=` (cd.count_dlv = .N),
                         by = list(BrthYear, CD_UID, dlv)
@@ -124,10 +134,15 @@ init_server <- function(id, df, y1, y2, q){
                            `:=` (total_lvb_cd = sum(cd.count_dlv,
                                                     na.rm = TRUE)),
                            by = c("CD_UID","BrthYear")
+                           ][,
+                             c("CD_UID", "BrthYear", "total_lvb_cd")
                            ]),
-            by = c("CD_UID", "BrthYear"))[,
-                                          `:=` (rate = 1000*total_cases/total_lvb_cd),
-                                          by = c("CD_UID", "BrthYear")
+            by = c("CD_UID", "BrthYear"),
+            all.y = TRUE,
+            allow.cartesian = TRUE
+            )[,
+              `:=` (rate = 1000*total_cases/total_lvb_cd),
+              by = c("CD_UID", "BrthYear")
             ][
               order(-rate)
             ] %>%
@@ -146,20 +161,27 @@ init_server <- function(id, df, y1, y2, q){
                    c("CD_UID", "BrthYear","cat_tier4", "total_cases")
             ]),
             unique(
-              unique(getSubsetByTimeRange(consts$cd_birth,
-                                          y1(),
-                                          y2())[tolower(dlv) %in% c("lvb", "stillbirth"),
-                                                c("CD_UID", "BrthYear", "dlv")
-                                          ][, `:=` (cd.count_dlv = .N),
-                                            by = list(BrthYear, CD_UID, dlv)
-                                          ])[,
-                                             `:=` (total_lvb_cd = sum(cd.count_dlv,
-                                                                      na.rm = TRUE)),
-                                             by = c("CD_UID","BrthYear")
-                                          ]),
-            by = c("CD_UID", "BrthYear"))[,
-                                         `:=` (rate = 1000*total_cases/total_lvb_cd),
-                                         by = c("CD_UID", "BrthYear")
+              unique(
+                getSubsetByTimeRange(
+                  consts$cd_birth,
+                  y1(),
+                  y2())[tolower(dlv) %in% c("lvb", "stillbirth"),
+                        c("CD_UID", "BrthYear", "dlv")
+                        ][, `:=` (cd.count_dlv = .N),
+                          by = list(BrthYear, CD_UID, dlv)
+                          ])[,
+                             `:=` (total_lvb_cd = sum(cd.count_dlv,
+                                                      na.rm = TRUE)),
+                             by = c("CD_UID","BrthYear")
+                             ][,
+                               c("CD_UID", "BrthYear", "total_lvb_cd")
+                             ]),
+            by = c("CD_UID", "BrthYear"),
+            all.y = TRUE,
+            allow.cartesian = TRUE
+            )[,
+              `:=` (rate = 1000*total_cases/total_lvb_cd),
+              by = c("CD_UID", "BrthYear")
             ][
               order(-rate)
             ] %>%
@@ -171,13 +193,15 @@ init_server <- function(id, df, y1, y2, q){
         }
     } else{
       if(is.null(q()) || q() %in% "0"){
-          merge(unique(
-            getCountyDataRiskTime(df,
-                                  line_risk(),
-                                  y1(),
-                                  y2())[, c("CD_UID", "BrthYear",
-                                            line_risk(), "total_cases")
-                                  ]),
+          merge(
+            unique(
+              getCountyDataRiskTime(
+                df,
+                line_risk(),
+                y1(),
+                y2())[, c("CD_UID", "BrthYear",
+                          line_risk(), "total_cases")
+                      ]),
             unique(
               unique(
                 getSubsetByTimeRange(
@@ -191,9 +215,12 @@ init_server <- function(id, df, y1, y2, q){
                              `:=` (total_lvb_cd = sum(cd.count_dlv,
                                                       na.rm = TRUE)),
                              by = c("CD_UID","BrthYear", line_risk())
-                             ]),
+                             ][,
+                               c("CD_UID", "BrthYear", line_risk(), "total_lvb_cd")
+                               ]),
             by = c("CD_UID", "BrthYear", line_risk()),
-            allow.cartesian = TRUE
+            allow.cartesian = TRUE,
+            all.y = TRUE
             )[,
               `:=` (rate = 1000*total_cases/total_lvb_cd),
               by = c("CD_UID", "BrthYear", line_risk())
@@ -207,15 +234,16 @@ init_server <- function(id, df, y1, y2, q){
           unique()
         } else if (!q() == "0" &&
                    is.na(stringr::str_extract(q(), pattern = "\\(.*\\)"))){
-          merge(unique(
-            getCountyDataByCaseRiskTime(
-              df,
-              line_risk(),
-              y1(),
-              y2(),
-              q())[,
-                   c("CD_UID", "BrthYear",
-                     "cat_tier3", line_risk(), "total_cases")
+          merge(
+            unique(
+              getCountyDataByCaseRiskTime(
+                df,
+                line_risk(),
+                y1(),
+                y2(),
+                q())[,
+                     c("CD_UID", "BrthYear",
+                       "cat_tier3", line_risk(), "total_cases")
                    ]),
             unique(
               unique(
@@ -230,9 +258,12 @@ init_server <- function(id, df, y1, y2, q){
                      `:=` (total_lvb_cd = sum(cd.count_dlv,
                                               na.rm = TRUE)),
                      by = c("CD_UID","BrthYear", line_risk())
+                  ][,
+                    c("CD_UID", "BrthYear", line_risk(), "total_lvb_cd")
                   ]),
             by = c("CD_UID", "BrthYear", line_risk()),
-            allow.cartesian = TRUE
+            allow.cartesian = TRUE,
+            all.y = TRUE
             )[,
               `:=` (rate = 1000*total_cases/total_lvb_cd),
               by = c("CD_UID", "BrthYear", line_risk())
@@ -245,43 +276,50 @@ init_server <- function(id, df, y1, y2, q){
             .[order(-rate)] %>% 
             unique()
         } else{
-          merge(unique(
-            getCountyDataByCaseRiskTime(df,
-                                        line_risk(),
-                                        y1(),
-                                        y2(),
-                                        q())[,
-                                             c("CD_UID", "BrthYear",
-                                               "cat_tier4", line_risk(), "total_cases")
-                                        ]),
-            unique(getSubsetByTimeRange(consts$cd_birth,
-                                        y1(),
-                                        y2())[tolower(dlv) %in% c("lvb", "stillbirth"),
-                                              c("CD_UID", "BrthYear", "cd.count_dlv")
-                                        ][,
-                                          `:=` (total_lvb_cd = sum(cd.count_dlv,
-                                                                   na.rm = TRUE)),
-                                          by = c("CD_UID","BrthYear")
-                                        ][,
-                                          `:=` (total_lvb_year = sum(cd.count_dlv, 
-                                                                     na.rm = TRUE)),
-                                          by = c("BrthYear")
-                                        ]),
-            by = c("CD_UID", "BrthYear"))[,
-                                         `:=` (rate = 1000*total_cases/total_lvb_cd),
-                                         by = c("CD_UID", "BrthYear", line_risk())
+          merge(
+            unique(
+              getCountyDataByCaseRiskTime(
+                df,
+                line_risk(),
+                y1(),
+                y2(),
+                q())[,
+                     c("CD_UID", "BrthYear",
+                     "cat_tier4", line_risk(), "total_cases")
+                     ]),
+            unique(
+              unique(
+                getSubsetByTimeRange(
+                  consts$cd_birth,
+                  y1(),
+                  y2())[tolower(dlv) %in% c("lvb", "stillbirth"),
+                        c("CD_UID", "BrthYear", "dlv", line_risk())
+                  ][, `:=` (cd.count_dlv = .N),
+                    by = c("BrthYear", "CD_UID", "dlv", line_risk())
+                  ])[,
+                     `:=` (total_lvb_cd = sum(cd.count_dlv,
+                                              na.rm = TRUE)),
+                     by = c("CD_UID","BrthYear", line_risk())
+                  ][,
+                    c("CD_UID", "BrthYear", line_risk(), "total_lvb_cd")
+                  ]),
+            by = c("CD_UID", "BrthYear", line_risk()),
+            all.y = TRUE,
+            allow.cartesian = TRUE
+            )[,
+              `:=` (rate = 1000*total_cases/total_lvb_cd),
+              by = c("CD_UID", "BrthYear", line_risk())
             ][
               order(-rate)
             ] %>%
             merge(consts$cd_names, by = c("CD_UID")) %>%
             .[,c("CD_UID", "cd_full", "BrthYear", line_risk(),
-                 "total_cases", "total_lvb_cd", "rate", "total_lvb_year")] %>%
+                 "total_cases", "total_lvb_cd", "rate")] %>%
             .[order(-rate)] %>% 
             unique()
         }
       }
     })
-    
     
     
     
@@ -308,7 +346,7 @@ init_server <- function(id, df, y1, y2, q){
           plot_line(
             data = county_data() %>%
               .[,`:=` (ntc = sum(total_cases, na.rm = TRUE),
-                       ntlvb = total_lvb_year),
+                       ntlvb = sum(total_lvb_cd, na.rm = TRUE)),
                 by = .(BrthYear)] %>% 
               .[,.(BrthYear, ntc, ntlvb)] %>%
               unique() %>% 
@@ -333,7 +371,7 @@ init_server <- function(id, df, y1, y2, q){
           plot_risk_line(
             data = county_data() %>%
               .[,`:=` (ntc = sum(total_cases, na.rm = TRUE),
-                       ntlvb = total_lvb_year),
+                       ntlvb = sum(total_lvb_cd, na.rm = TRUE)),
               by = c("BrthYear", line_risk())] %>%
               .[,c("BrthYear", line_risk(),"ntc", "ntlvb")] %>%
               unique() %>% 

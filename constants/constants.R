@@ -36,7 +36,9 @@ cd_anom <- read.csv("./data/cd_anomaly.csv", header = TRUE, stringsAsFactors = T
   data.table::setDT()
 
 cd_birth <- read.csv("./data/cd_birth.csv", header = TRUE, stringsAsFactors = TRUE) |> 
-  dplyr::mutate(CD_UID = as.character(CD_UID)) |> 
+  dplyr::mutate(CD_UID = as.character(CD_UID)) |>
+  ## filtering only NS counties
+  dplyr::filter(dplyr::between(CD_UID, 1201, 1299)) |>
   data.table::setDT()
 
 ## Help and intro data

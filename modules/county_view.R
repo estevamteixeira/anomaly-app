@@ -51,98 +51,171 @@ init_server <- function(id, df, y1, y2, q){
     # the periods (initial, final years), and condition selected
     county_data <- reactive({
       if(is.null(q()) || q() == "0"){
-        merge(unique(
-          getCountyData(df,
-                        y1(),
-                        y2())[, c("CD_UID", "total_cases")
-                              ]),
-          unique(getSubsetByTimeRange(consts$cd_birth,
-                                      y1(),
-                                      y2())[tolower(dlv) %in% c("lvb", "stillbirth"),
-                                         c("CD_UID", "cd.count_dlv")
-                                         ][,
-                                           `:=` (total_lvb = sum(cd.count_dlv,
-                                                                 na.rm = TRUE)),
-                                           by = c("CD_UID")
-                                           ]),
-          by = c("CD_UID"))[,
-                           `:=` (rate = 1000*total_cases/total_lvb),
-                           by = c("CD_UID")
+        merge(
+          unique(
+          getCountyData(
+            df,
+            y1(),
+            y2())[, c("CD_UID", "total_cases")
+                  ]),
+          unique(
+            unique(
+              getSubsetByTimeRange(
+                consts$cd_birth,
+                y1(),
+                y2())[tolower(dlv) %in% c("lvb", "stillbirth"),
+                      c("CD_UID", "BrthYear", "dlv")
+                ][, `:=` (cd.count_dlv = .N),
+                  by = list(BrthYear, CD_UID, dlv)
+                ])[,
+                   `:=` (total_lvb_cd = sum(cd.count_dlv,
+                                            na.rm = TRUE)),
+                   by = c("CD_UID","BrthYear")
+                ][,
+                  c("CD_UID", "BrthYear", "total_lvb_cd")]
+            )[,
+              `:=` (total_lvb = sum(total_lvb_cd,
+                                       na.rm = TRUE)),
+              by = c("CD_UID")
+            ],
+          by = c("CD_UID"),
+          allow.cartesian = TRUE,
+          all.y = TRUE)[,
+            `:=` (rate = 1000*total_cases/total_lvb),
+            by = c("CD_UID")
               ][
                 order(-rate)
               ][,
-                `:=` (total_cases = ifelse(total_cases < 5,
-                                           "< 5",
-                                           as.character(scales::comma(total_cases,
-                                                                      accuracy = 1))),
-                      total_lvb = ifelse(total_lvb < 5,
-                                         "< 5",
-                                         as.character(scales::comma(total_lvb,
-                                                                    accuracy = 1))))
-              ] %>%
+                `:=` (total_cases = ifelse(
+                  total_cases < 5,
+                  "< 5",
+                  as.character(
+                    scales::comma(
+                      total_cases,
+                      accuracy = 1))),
+                  total_lvb = ifelse(
+                    total_lvb < 5,
+                    "< 5",
+                    as.character(
+                      scales::comma(
+                        total_lvb,
+                        accuracy = 1)))
+                  )] %>%
           merge(consts$cd_names, by = c("CD_UID")) %>%
           .[, .(CD_UID, cd_full, total_cases, total_lvb, rate)] %>%
           .[order(-rate)] %>% 
           unique()
       } else if (!q() == "0" &&
                  is.na(stringr::str_extract(q(), pattern = "\\(.*\\)"))){
-        merge(unique(
-          getCountyDataByCase(df, y1(), y2(), q())[,
-                                                   c("CD_UID", "cat_tier3", "total_cases")
+        merge(
+          unique(
+            getCountyDataByCase(
+              df,
+              y1(),
+              y2(),
+              q())[,
+                   c("CD_UID", "cat_tier3", "total_cases")
           ]),
-          unique(getSubsetByTimeRange(consts$cd_birth,
-                                      y1(),
-                                      y2())[tolower(dlv) %in% c("lvb", "stillbirth"),
-                                            c("CD_UID", "cd.count_dlv")
-                                      ][,
-                                        `:=` (total_lvb = sum(cd.count_dlv,
-                                                              na.rm = TRUE)),
-                                        by = c("CD_UID")
-                                      ]),
-          by = c("CD_UID"))[,
-                            `:=` (rate = 1000*total_cases/total_lvb),
-                            by = c("CD_UID")
+          unique(
+            unique(
+              getSubsetByTimeRange(
+                consts$cd_birth,
+                y1(),
+                y2())[tolower(dlv) %in% c("lvb", "stillbirth"),
+                    c("CD_UID", "BrthYear", "dlv")
+                ][, `:=` (cd.count_dlv = .N),
+                by = list(BrthYear, CD_UID, dlv)
+                ])[,
+                   `:=` (total_lvb_cd = sum(cd.count_dlv,
+                                            na.rm = TRUE)),
+                   by = c("CD_UID","BrthYear")
+                ][,
+                  c("CD_UID", "BrthYear", "total_lvb_cd")]
+          )[,
+            `:=` (total_lvb = sum(total_lvb_cd,
+                                  na.rm = TRUE)),
+            by = c("CD_UID")
+          ],
+          by = c("CD_UID"),
+          allow.cartesian = TRUE,
+          all.y = TRUE)[,
+          `:=` (rate = 1000*total_cases/total_lvb),
+          by = c("CD_UID")
           ][
             order(-rate)
           ][,
-            `:=` (total_cases = ifelse(total_cases < 5,
-                                       "< 5",
-                                       as.character(scales::comma(total_cases, accuracy = 1))),
-                  total_lvb = ifelse(total_lvb < 5,
-                                     "< 5",
-                                     as.character(scales::comma(total_lvb, accuracy = 1))))
-          ] %>%
+            `:=` (total_cases = ifelse(
+              total_cases < 5,
+              "< 5",
+              as.character(
+                scales::comma(
+                  total_cases,
+                  accuracy = 1))),
+              total_lvb = ifelse(
+                total_lvb < 5,
+                "< 5",
+                as.character(
+                  scales::comma(
+                    total_lvb, 
+                    accuracy = 1)))
+              )] %>%
           merge(consts$cd_names, by = c("CD_UID")) %>%
           .[,c("CD_UID", "cd_full", "total_cases", "total_lvb", "rate")] %>%
           .[order(-rate)] %>% 
           unique()
       } else{
-        merge(unique(
-          getCountyDataByCase(df, y1(), y2(), q())[,
-                                                   c("CD_UID", "cat_tier4", "total_cases")
-                                                   ]),
-              unique(getSubsetByTimeRange(consts$cd_birth,
-                                          y1(),
-                                          y2())[tolower(dlv) %in% c("lvb", "stillbirth"),
-                                                c("CD_UID", "cd.count_dlv")
-                                          ][,
-                                            `:=` (total_lvb = sum(cd.count_dlv,
-                                                                  na.rm = TRUE)),
-                                            by = c("CD_UID")
-                                          ]),
-              by = c("CD_UID"))[,
-                               `:=` (rate = 1000*total_cases/total_lvb),
-                               by = c("CD_UID")
+        merge(
+          unique(
+            getCountyDataByCase(
+              df,
+              y1(),
+              y2(),
+              q())[,
+                   c("CD_UID", "cat_tier4", "total_cases")
+                   ]),
+          unique(
+            unique(
+              getSubsetByTimeRange(
+                consts$cd_birth,
+                y1(),
+                y2())[tolower(dlv) %in% c("lvb", "stillbirth"),
+                      c("CD_UID", "BrthYear", "dlv")
+                ][, `:=` (cd.count_dlv = .N),
+                  by = list(BrthYear, CD_UID, dlv)
+                ])[,
+                   `:=` (total_lvb_cd = sum(cd.count_dlv,
+                                            na.rm = TRUE)),
+                   by = c("CD_UID","BrthYear")
+                ][,
+                  c("CD_UID", "BrthYear", "total_lvb_cd")]
+          )[,
+            `:=` (total_lvb = sum(total_lvb_cd,
+                                  na.rm = TRUE)),
+            by = c("CD_UID")
+          ],
+          by = c("CD_UID"),
+          allow.cartesian = TRUE,
+          all.y = TRUE)[,
+            `:=` (rate = 1000*total_cases/total_lvb),
+            by = c("CD_UID")
               ][
                 order(-rate)
               ][,
-             `:=` (total_cases = ifelse(total_cases < 5,
-                                        "< 5",
-                                        as.character(scales::comma(total_cases, accuracy = 1))),
-                   total_lvb = ifelse(total_lvb < 5,
-                                      "< 5",
-                                      as.character(scales::comma(total_lvb, accuracy = 1))))
-           ] %>%
+             `:=` (total_cases = ifelse(
+               total_cases < 5,
+               "< 5",
+               as.character(
+                 scales::comma(
+                   total_cases,
+                   accuracy = 1))),
+               total_lvb = ifelse(
+                 total_lvb < 5,
+                 "< 5",
+                 as.character(
+                   scales::comma(
+                     total_lvb,
+                     accuracy = 1)))
+               )] %>%
           merge(consts$cd_names, by = c("CD_UID")) %>%
           .[,c("CD_UID", "cd_full", "total_cases", "total_lvb", "rate")] %>%
           .[order(-rate)] %>% 
@@ -222,7 +295,11 @@ init_server <- function(id, df, y1, y2, q){
     # DataTable proxy object
     DTproxy <- DT::dataTableProxy("countytable")
     
-    return(list(cd_selected = reactive({county_data()[input$countytable_rows_selected,]})))
+    return(
+      list(cd_selected = reactive({
+      county_data()[input$countytable_rows_selected,]
+      })
+      ))
     
   })
  }

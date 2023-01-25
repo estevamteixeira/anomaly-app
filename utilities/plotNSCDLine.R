@@ -75,7 +75,7 @@ plot_line <- function(data, var){
       ),
       yaxis = list(
         title = list(
-          text = "Prevalence (*cases per 1,000 total births)",
+          text = "Prevalence <br> (*cases per 1,000 total births)",
           face = "bold",
           size = 14
         ),
@@ -171,8 +171,8 @@ plot_risk_line <- function(data, var, risk){
       dta$SexNum <- factor(dta$SexNum,
                            levels = c(-1,1,2),
                            labels = c("-1",
-                                      "Female",
-                                      "Male"))
+                                      "Male",
+                                      "Female"))
       pal <- c("-1" = "#FFFFFF", 
                "Female" = "#E41A1C",
                "Male" = "#008D8B")
@@ -309,7 +309,7 @@ plot_risk_line <- function(data, var, risk){
         ),
       yaxis = list(
         title = list(
-          text = "Prevalence (*cases per 1,000 total births)",
+          text = "Prevalence <br> (*cases per 1,000 total births)",
           face = "bold",
           size = 14
           ),
