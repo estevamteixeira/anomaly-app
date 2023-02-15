@@ -30,17 +30,17 @@ ui <- function(id){
   ns <- NS(id)
   
   introBox(data.step = 9, data.intro = consts$intro$text[9],
-  box(
-    title = "Data Sources",
-    status = "primary",
-    collapsible = FALSE,
-    solidHeader = FALSE,
-    width = 12,
-    # This looks the same as your usual piece of code, 
-    # except that the id is wrapped into 
-    # the ns() function we defined before
-    plotly::plotlyOutput(ns("dataupset"))
-    )
+           box(
+             title = "Data Sources",
+             status = "primary",
+             collapsible = FALSE,
+             solidHeader = FALSE,
+             width = 12,
+             # This looks the same as your usual piece of code, 
+             # except that the id is wrapped into 
+             # the ns() function we defined before
+             plotly::plotlyOutput(ns("dataupset"))
+           )
   )
 }
 
@@ -56,12 +56,12 @@ init_server <- function(id, df, y1, y2, q){
     
     srce_data <- reactive({
       if(is.null(q()) || q() %in% "0"){
-       dta <- unique(
+        dta <- unique(
           getSubsetByTimeRange(df,
-                              y1(),
-                              y2())[, .(CaseID, BrthYear, 
-                                        Diags, SrceIDs)
-                              ]
+                               y1(),
+                               y2())[, .(CaseID, BrthYear, 
+                                         Diags, SrceIDs)
+                               ]
         )[,`:=` (vals = 1,
                  SrceIDs = factor(
                    fcase(
@@ -92,7 +92,7 @@ init_server <- function(id, df, y1, y2, q){
                      SrceIDs %in% "6", "NeoNatal",
                      SrceIDs %in% "7", "Others")))]
       }else{
-      dta <-  unique(
+        dta <-  unique(
           getSubsetByTimeRange(df,
                                y1(),
                                y2(),
@@ -126,17 +126,17 @@ init_server <- function(id, df, y1, y2, q){
     
     getValidSets <- reactive({
       # withProgress(message = "Deriving input sets", value = 0, {
-        
-        logical_cols <-
-          names(srce_data())[which(sapply(srce_data(), function(x){
-            all(x %in% c(0, 1)) %in% TRUE
-          }))]
-            
-        names(logical_cols) <- logical_cols
-        
-        lapply(logical_cols, function(x)
-          which(srce_data()[[x]] == 1))
-        # }
+      
+      logical_cols <-
+        names(srce_data())[which(sapply(srce_data(), function(x){
+          all(x %in% c(0, 1)) %in% TRUE
+        }))]
+      
+      names(logical_cols) <- logical_cols
+      
+      lapply(logical_cols, function(x)
+        which(srce_data()[[x]] == 1))
+      # }
       # })
     })
     
@@ -149,7 +149,7 @@ init_server <- function(id, df, y1, y2, q){
       chosen_sets <- getSelectedSetNames()
       sets <- valid_sets[chosen_sets]
       # if (getSetSort()) {
-        sets <- sets[order(unlist(lapply(sets, length)))]
+      sets <- sets[order(unlist(lapply(sets, length)))]
       # }
       sets
     })
@@ -211,7 +211,7 @@ init_server <- function(id, df, y1, y2, q){
           unlist(intersects[(i + 1):length(intersects)])
         lapply(intersectno, function(intersect) {
           # if (assignment_type == "upset") {
-            length(setdiff(intersect, members_in_higher_levels))
+          length(setdiff(intersect, members_in_higher_levels))
           # } else {
           # length(intersect)
           # }
@@ -265,24 +265,28 @@ init_server <- function(id, df, y1, y2, q){
         nsets <- length(selected_sets)
         setnames <- names(selected_sets)
         
-        lines <-
-          data.table::rbindlist(lapply(1:nintersections, function(combono) {
-            data.frame(
-              combo = combono,
-              x = rep(combono, max(2, length(combos[[combono]]))),
-              y = (nsets - combos[[combono]]) + 1,
-              name = setnames[combos[[combono]]]
-            )
-          }))[,`:=` (idx = .N), by = .(x, name)
-              ][,`:=` (name = ifelse(idx %in% 1,
-                                        paste(name, collapse = " \u2229 "),
-                                        name)), by = .(x)]
+        # Create dataset
+        dta <- data.table::rbindlist(lapply(1:nintersections, function(combono) {
+          data.frame(
+            combo = combono,
+            x = rep(combono, max(2, length(combos[[combono]]))),
+            y = (nsets - combos[[combono]]) + 1,
+            name = setnames[combos[[combono]]])
+        }))[,`:=` (idx = .N), by = .(x, name)
+        ][,`:=` (label = ifelse(idx %in% 1,
+                                paste0(name, collapse = " \u2229 "),
+                                name)), by = .(x)]
         
-        plot_ly(
+        # Create base plot
+        plot <- plot_ly(
+          data = dta,
           type = "scatter",
           mode = "markers",
           marker = list(color = consts$colors$ash_light,
-                        size = 5)
+                        size = 5),
+          source = "grid",
+          customdata = ~label,
+          unselected = list(marker = list(opacity = 0.5))
         ) %>% add_trace( ## grey dots background
           type = "scatter",
           x = rep(1:nintersections,
@@ -291,33 +295,35 @@ init_server <- function(id, df, y1, y2, q){
             rep(x - 0.5, nintersections))),
           hoverinfo = "none",
           marker = list(color = consts$colors$ash_light,
-                        size = 5)
+                        size = 5),
+          customdata= ~rep(unique(label),length(selected_sets))
         ) %>% add_trace( ## green dots - sets
           type = "scatter",
-          data = group_by(lines, combo),
+          data = group_by(dta, combo),
           mode = "lines+markers",
-          x = lines$x,
-          y = lines$y - 0.5,
+          x = ~x,
+          y = ~y - 0.5,
           line = list(color = consts$colors$secondary, width = 3),
           marker = list(color = consts$colors$secondary,
                         size = 5),
           hoverinfo = "text",
-          text = ~name
+          text = ~label
         ) %>% layout(
           xaxis = list(
+            title = "",
             showticklabels = FALSE,
             showgrid = FALSE,
             zeroline = FALSE
           ),
           yaxis = list(
+            title = "",
             showticklabels = FALSE,
             showgrid = TRUE,
             range = c(0, nsets),
             zeroline = FALSE,
             range = 1:nsets
           ),
-          margin = list(t = 0, b = 0),
-          dragmode = "select"
+          margin = list(t = 0, b = 0)
         ) %>% 
           plotly::style(hoverlabel = list(
             bgcolor  = "black",
@@ -327,7 +333,57 @@ init_server <- function(id, df, y1, y2, q){
               size = 14,
               face = "bold"
             )
-          ))
+          )) %>% 
+          event_register("plotly_click")
+        
+        ## Work on the logic to update the color of
+        ## hovered dots
+        
+        if (is.null(tract_grd())){
+          
+          plot
+        
+          } else {
+            # Filter data
+            hoverdata <- setDT(dta)[combo %in% tract_grd()$x]
+            
+            # Update plot
+            plot %>%
+              add_trace( ## coloring orange when hovering
+                type = "scatter",
+                data = group_by(hoverdata, combo),
+                mode = "lines+markers",
+                x = ~x,
+                y = ~y - 0.5,
+                line = list(color = "#FFA500",
+                            width = 4),
+                marker = list(color = "#CC8400",
+                              size = 6),
+                hoverinfo = "text",
+                text = ~label
+              ) %>% 
+              plotly::style(hoverlabel = list(
+                bgcolor  = "black",
+                bordercolor = "transparent",
+                font = list(
+                  color = "white",
+                  size = 14,
+                  face = "bold"
+                )
+              ))
+        }
+        
+      })
+      
+      # Tract hover ids
+      tract_grd <- reactive({
+        eventdata <- event_data("plotly_click", source = "grid")
+        
+        if (is.null(eventdata)){
+          return(NULL)
+        } else {
+          return(eventdata)
+        }
       })
       
       # Make the bar chart illustrating set sizes
@@ -337,24 +393,35 @@ init_server <- function(id, df, y1, y2, q){
         selected_sets <- getSets()
         setnames <- names(selected_sets)
         
+        dta <- data.table::setDT(
+          data.frame(
+            combo = 1:length(unlist(lapply(selected_sets, length))),
+            size  = as.integer(unlist(lapply(selected_sets, length))),
+            label = names(unlist(lapply(selected_sets, length))))
+        )
         
-        plot_ly(
-          x = unlist(lapply(selected_sets, length)),
-          y = setnames,
+        # Base plot
+        plot <- plot_ly(
+          data = dta,
+          x = ~size,
+          y = ~label,
           type = "bar",
           orientation = "h",
           marker = list(color = consts$colors$secondary),
           hovertemplate = ~paste(
-            "<b>", setnames, "</b>",
+            "<b>", label, "</b>",
             "<br> Total reported cases:",
-            scales::comma(unlist(lapply(selected_sets, length)),
+            scales::comma(size,
                           accuracy = 1),
             "<extra></extra>"
-          )
+          ),
+          source = "horizontal",
+          customdata = ~label
         ) %>% layout(
           bargap = 0.4,
           yaxis = list(
-            categoryarray = rev(setnames),
+            title = "",
+            categoryarray = ~rev(label),
             categoryorder = "array",
             face = "bold",
             size = 14
@@ -375,7 +442,55 @@ init_server <- function(id, df, y1, y2, q){
               size = 14,
               face = "bold"
             )
-          ))
+          )) %>% 
+          event_register("plotly_click")
+        
+        ## Work on the logic to update the color of
+        ## hovered horizontal bars
+        
+        if (is.null(tract_grd())){
+          
+          plot
+        
+        } else {
+            # Filter data
+          hoverdata <- setDT(dta)[
+            label %in% unique(
+              unlist(
+                strsplit(
+                  tract_grd()$customdata, " \u2229 ", fixed = T)))
+            ]
+          
+          # Update plot
+          plot %>%
+            add_trace( ## coloring orange when hovering
+              type = "bar",
+              data = hoverdata,
+              x = ~size,
+              y = ~label,
+              orientation = "h",
+              marker = list(color = "#FFA500",
+                            line = list(color = "#CC8400",
+                                        width = 2)),
+              hovertemplate = ~paste(
+                "<b>", label, "</b>",
+                "<br> Total reported cases:",
+                scales::comma(size,
+                              accuracy = 1),
+                "<extra></extra>"
+              )
+            ) %>% 
+            layout(barmode = 'overlay') %>% 
+            plotly::style(hoverlabel = list(
+              bgcolor  = "black",
+              bordercolor = "transparent",
+              font = list(
+                color = "white",
+                size = 14,
+                face = "bold"
+              )
+            ))
+          }
       })
       
       upsetIntersectSizeBarChart <- reactive({
@@ -385,16 +500,40 @@ init_server <- function(id, df, y1, y2, q){
         combos <- ints$combinations
         nintersections <- length(calculateIntersections()[["intersections"]])
         
-        p <-
-          plot_ly(showlegend = FALSE) %>% 
+        selected_sets <- getSets()
+        setnames <- names(selected_sets)
+        
+        # Dataset
+        dta <- unique(data.table::rbindlist(
+          lapply(1:nintersections, function(combono) {
+            data.frame(
+              combo = combono,
+              name = setnames[combos[[combono]]],
+              size = intersects[combono])
+          }))[,`:=` (idx = .N), by = .(combo, name)
+          ][,`:=` (label = ifelse(idx %in% 1,
+                                  paste0(name, collapse = " \u2229 "),
+                                  name)), by = .(combo)
+          ][,
+            .(combo, label, size)
+          ])
+        
+        # Base plot
+        plot <- plot_ly(
+            data = dta,
+            showlegend = FALSE,
+            source = "vertical",
+            unselected = list(marker = list(opacity = 0.5)),
+            customdata = ~label
+            ) %>% 
           add_trace(
-            x = 1:nintersections,
-            y = unlist(intersects[1:nintersections]),
+            x = ~combo,
+            y = ~size,
             type = "bar",
             marker = list(color = consts$colors$secondary),
             hovertemplate = ~paste(
               "<b> Total reported cases </b>",
-              "<br>",scales::comma(unlist(intersects[1:nintersections]),
+              "<br>",scales::comma(size,
                                    accuracy = 1),
               "<extra></extra>"
             )
@@ -405,6 +544,7 @@ init_server <- function(id, df, y1, y2, q){
               title = "Intersection Size"
             ),
             xaxis = list(
+              title = "",
               face = "bold",
               size = 14
             )
@@ -417,23 +557,49 @@ init_server <- function(id, df, y1, y2, q){
               size = 14,
               face = "bold"
             )
-          ))
+          )) %>% 
+          event_register("plotly_click")
         
-        # bar_numbers <- getBarNumbers()
+        ## Work on the logic to update the color of
+        ## hovered vertical bars
+        if (is.null(tract_grd())){
+          
+          plot
         
-        # if (bar_numbers) {
-        #   p <-
-        #     p %>% add_trace(
-        #       type = "scatter",
-        #       mode = "text",
-        #       x = 1:nintersections,
-        #       y = unlist(intersects[1:nintersections]) + (max(intersects) * 0.05),
-        #       text = unlist(intersects[1:nintersections]),
-        #       textfont = list(color = "black")
-        #     )
-        # }
+        } else {
+            # Filter data
+          hoverdata <- setDT(dta)[combo %in% tract_grd()$x]
+          
+          # Update plot
+          plot %>% 
+            add_trace( ## coloring orange when hovering
+              type = "bar",
+              data = hoverdata,
+              x = ~combo,
+              y = ~size,
+              marker = list(color = "#FFA500",
+                            line = list(color = "#CC8400",
+                                        width = 2)),
+              hovertemplate = ~paste(
+                "<b> Total reported cases </b>",
+                "<br>",scales::comma(size,
+                                     accuracy = 1),
+                "<extra></extra>"
+              )
+            ) %>% 
+            layout(barmode = 'overlay') %>% 
+            plotly::style(hoverlabel = list(
+              bgcolor  = "black",
+              bordercolor = "transparent",
+              font = list(
+                color = "white",
+                size = 14,
+                face = "bold"
+              )
+            ))
+          
+          }
         
-        p
       })
       
       ## Putting multiple plots in a single view
@@ -443,15 +609,15 @@ init_server <- function(id, df, y1, y2, q){
       intersect_size_chart <- upsetIntersectSizeBarChart()
       
       s1 <- subplot(
-          plotly_empty(type = "scatter", mode = "markers"),
-          plotly_empty(type = "scatter", mode = "markers"),
-          plotly_empty(type = "scatter", mode = "markers"),
-          set_size_chart,
-          nrows = 2,
-          widths = c(0.3, 0.7),
-          titleX = TRUE,
-          margin = 0
-        ) %>%
+        plotly_empty(type = "scatter", mode = "markers"),
+        plotly_empty(type = "scatter", mode = "markers"),
+        plotly_empty(type = "scatter", mode = "markers"),
+        set_size_chart,
+        nrows = 2,
+        widths = c(0.3, 0.7),
+        titleX = TRUE,
+        margin = 0
+      ) %>%
         layout(showlegend = FALSE)
       
       s2 <- subplot(

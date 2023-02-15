@@ -50,9 +50,10 @@ body {
 
   &.advanced-grid {
     grid-template-areas:
-      "lm1       lm1       lm2       lm2      lm3      lm3"
-      "map       map       map       table    table    table"
-      "linechart linechart linechart barchart barchart barchart";
+      "lm1       lm1       lm2       lm2       lm3       lm3"
+      "map       map       map       table     table     table"
+      "linechart linechart linechart linechart linechart linechart"
+      "barchart  barchart  barchart  barchart  barchart  barchart";
     grid-template-columns: repeat(6, 1fr);
     grid-template-rows: auto repeat(1, 480px)
   }

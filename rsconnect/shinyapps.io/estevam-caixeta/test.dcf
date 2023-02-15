@@ -5,10 +5,10 @@ account: estevam-caixeta
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 7510651
-bundleId: 6573347
+bundleId: 6778274
 url: https://estevam-teixeira.shinyapps.io/test/
-when: 1669828069.76093
-lastSyncTime: 1669828069.76098
+when: 1674762819.25421
+lastSyncTime: 1674762819.25423
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: constants/data_build.R|data/app.R
+ignoredFiles: data/app.R

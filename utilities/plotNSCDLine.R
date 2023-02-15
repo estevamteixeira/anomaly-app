@@ -77,7 +77,8 @@ plot_line <- function(data, var){
         title = list(
           text = "Prevalence <br> (*cases per 1,000 total births)",
           face = "bold",
-          size = 14
+          size = 14,
+          rangemode = "tozero"
         ),
         tickfont = list(
           face = "bold",
@@ -311,7 +312,8 @@ plot_risk_line <- function(data, var, risk){
         title = list(
           text = "Prevalence <br> (*cases per 1,000 total births)",
           face = "bold",
-          size = 14
+          size = 14,
+          rangemode = "tozero"
           ),
         tickfonts = list(
           face = "bold",
