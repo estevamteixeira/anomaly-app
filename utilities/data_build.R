@@ -8,9 +8,32 @@ dta <- readr::read_csv("H:\\RCP\\RCP_Data\\TeixeiEC\\NSAtleePD\\data\\NSAtleePD.
   .[,`:=` (BTBrthDT = as.Date(BTBrthDT),
            BTDethDT = as.Date(BTDethDT))]
 
-## PCCF = Postal Code Conversion File
+# ******************************************
+## PCCF = Postal Code Conversion File ------
+# ******************************************
 
-pccf <- read.csv("H:\\RCP\\RCP_Data\\TeixeiEC\\PCCF.csv")
+pccf <- readr::read_fwf("H:\\RCP\\RCP_Data\\TeixeiEC\\pccf_2022_12_fccp\\PCCF_FCCP_V2212_2021.txt",
+                        readr::fwf_widths(c(6,3,2,4,7,70,3,3,3,1,7,2,4,5,4,1,8,3,1,11,13,1,1,30,1,1,8,8,1,3,1,1),
+                                   col_names = c("PostalCode","FSA","PR","CDuid","CSDuid","CSDName","CSDType",
+                                    "CCScode","SAC","SACType","CTname","ER","DPL","FED13uid","POP_CNTR_RA",
+                                    "POP_CNTR_RA_type","DAuid","DisseminationBlock","Rep_Pt_Type","LAT","LONG",
+                                    "SLI","PCtype","Comm_Name","DMT","HDMT","Birth_Date","Ret_Date","PO","QI",
+                                    "Source","POP_CNTR_RA_SIZE_CLASS")))
+
+## Retired retired postal codes
+
+pccf_ret <- readr::read_fwf("H:\\RCP\\RCP_Data\\TeixeiEC\\pccf_2022_12_fccp\\PCCF_retired_FCCP_retraite_V2212_2021.txt",
+                            readr::fwf_widths(c(6,3,2,4,7,70,3,3,3,1,7,2,4,5,4,1,8,3,1,11,13,1,1,30,1,1,8,8,1,3,1,1),
+                                       col_names = c("PostalCode","FSA","PR","CDuid","CSDuid","CSDName","CSDType",
+                                                     "CCScode","SAC","SACType","CTname","ER","DPL","FED13uid","POP_CNTR_RA",
+                                                     "POP_CNTR_RA_type","DAuid","DisseminationBlock","Rep_Pt_Type","LAT","LONG",
+                                                     "SLI","PCtype","Comm_Name","DMT","HDMT","Birth_Date","Ret_Date","PO","QI",
+                                                     "Source","POP_CNTR_RA_SIZE_CLASS")))
+
+## binding them together into one data frame
+pccf <- rbind(pccf, pccf_ret)
+
+## Conversion file: zone, network, clusters ----
 
 hlth <- haven::read_sas("H:\\RCP\\RCP_Data\\Prod\\Geocodes\\Data\\hlthout.sas7bdat"#, n_max = 5
 )
@@ -20,12 +43,25 @@ hlth <- setDT(hlth) %>%
   .[,`:=` (CONTCTID = as.numeric(substr(ID, 10,15)))] %>% 
   .[order(CONTCTID)]
 
+hlth2 <- haven::read_sas("H:\\RCP\\RCP_Data\\TeixeiEC\\NS_Maps\\NSC_Clusters\\cluster.sas7bdat") %>%
+  select(DA, Zone, Zone_Number, Network, Network_Number, Network_Long_Name, Cluster, Cluster_Number) %>%
+  mutate(DA = as.character(DA)) %>%
+  na.omit(DA) %>%
+  unique()
+
+
+# ********************************************
+# Add CANcensus IDs to the Atlee database ----
+# ********************************************
+
 dta <- merge(dta,
-             hlth[,.(CONTCTID,CSDuid)],
+             hlth[,.(CONTCTID,CSDuid, DAuid)],
              by = c("CONTCTID"),
              all.x = TRUE)
 
-## get urban CSDUID (area type)
+dta <- unique(dta, by = "BIRTHID")
+
+## get urban CSDUID (area type) --------
 ## RuralUrbanFlag: All regions and regional aggregates outside census 
 ## metropolitan areas/census agglomerations were coded as rural.
 ## All regions within census metropolitan areas/census agglomerations 
@@ -35,6 +71,14 @@ dta <- merge(dta,
 # key to access cancensus datasets
 key = "CensusMapper_f505397ff4bb63467541085d028c9be8"
 
+# da <- data.table::setDT(cancensus::get_census(
+#   dataset = "CA21",
+#   regions = list(PR = "12"),
+#   level = "DA",
+#   geo_format = "sf",
+#   api_key = key
+# ))
+
 csd_shp <- data.table::setDT(cancensus::get_census(
   dataset = "CA21",
   regions = list(PR = "12"),
@@ -43,39 +87,76 @@ csd_shp <- data.table::setDT(cancensus::get_census(
   api_key = key
 ))
 
+cd_shp <- data.table::setDT(cancensus::get_census(
+  dataset = "CA21",
+  regions = list(PR = "12"),
+  level = "CD",
+  geo_format = "sf",
+  api_key = key
+))
+
 ## CSDUID for urban areas in NS
 urb <- sort(unique(csd_shp[!is.na(csd_shp$CMA_UID),]$GeoUID))
 
 ## get their postal codes
-urb_pc <- sort(unique(pccf[pccf$CSDUID %in% urb,]$Postal_Code))
+urb_pc <- sort(unique(pccf[pccf$CSDuid %in% urb,]$PostalCode))
+
+## Community clusters
+## Community Health Networks
+## Management Zones
+
+clus <- data.table::setDT(
+  sf::read_sf(
+    "H:\\RCP\\RCP_Data\\TeixeiEC\\NS_Maps\\NSC_Clusters\\geo_export_0ed8251f-dbd5-4090-88ef-66c84d140e53.shp") %>%
+    sf::st_make_valid()
+  )
+
+hn <- data.table::setDT(
+  sf::read_sf(
+    "H:\\RCP\\RCP_Data\\TeixeiEC\\NS_Maps\\NSC_HealthNetwork\\geo_export_6985c353-2399-43a2-9514-d47b553341c2.shp") %>%
+    sf::st_make_valid()
+)
+
+# 
+# urb_shp <- data.table::setDT(
+#   sf::read_sf(
+#     "H:\\RCP\\RCP_Data\\TeixeiEC\\NS_Maps\\NSC_Urban\\urban_boundary.shp") %>% 
+#     sf::st_make_valid()
+# )
 
 # Anomaly data
 
-anom <- read.csv("H:\\RCP\\RCP_Data\\TeixeiEC\\NS_Maps\\XPort22V1.csv")
-anom$Birth_Date <- as.Date(as.character(anom$Birth_Date), format = "%d/%m/%Y")
-anom$Mat_DoB <- as.Date(as.character(anom$Mat_DoB), format = "%d/%m/%Y")
-anom$DeathD8 <- as.Date(as.character(anom$DeathD8), format = "%d/%m/%Y")
+anom <- read.csv("H:\\RCP\\RCP_Data\\TeixeiEC\\Anomalies\\Data\\XPort23V1.csv")
+anom$Birth_Date <- as.Date(as.character(stringr::str_pad(anom$Birth_Date, 8, pad = "0")), format = "%d%m%Y")
+anom$Mat_DoB <- as.Date(as.character(stringr::str_pad(anom$Mat_DoB, 8, pad = "0")), format = "%d%m%Y")
+anom$DeathD8 <- as.Date(as.character(stringr::str_pad(anom$DeathD8, 8, pad = "0")), format = "%d%m%Y")
 
-anom[,c(16:283)] <- sapply(anom[,c(16:283)], as.character)
+anom[,c(16:ncol(anom))] <- sapply(anom[,c(16:ncol(anom))], as.character)
+# Fix postal codes with 7 digits
+# Remove the last one
+anom$Post_Code <- ifelse(nchar(anom$Post_Code) %in% 7,
+                         substr(anom$Post_Code, 1, 6),
+                         anom$Post_Code)
 
 ## transform to long format
-## keeping only Q codes with diagnostics
+## keeping only Q codes as diagnostics
 ## create ICD10 categories
 
 anom_l = anom %>%
   tidyr::pivot_longer(cols = ADiags1:APrfxs67,
                       names_to = c("set",".value"),
                       names_pattern = "(.)([[:alpha:]]+)") %>%
-  # Keep only anomalies starting with Q
-  # Keep only postal codes that are not blank or missing
-  # Keep only patients living in NS
-  # Keep only anomalies that are not blank or missing
+  # Keep only anomalies starting with Q, not blank or missing
+  # Keep only postal codes that are not blank or missing - for mapping
   dplyr::filter(
-    grepl("^Q", Diags),
-    !Post_Code %in% c(""," ", NA),
+    grepl("^Q", Diags)
+     # !Post_Code %in% c(""," ", NA)
     # !SGC_Res %in% c(""," ", NA),
     # Prov_res %in% 12,
-    !Diags %in% c("", " ", NA)) %>%
+    # !Diags %in% c("", " ", NA)
+    ) %>%
+  # remove q54.4, Q35.7
+  dplyr::filter(!Diags %in% c("Q544","Q357")) %>%
   # dplyr::select("Post_Code", "CaseID","Prov_Birth","Prov_res","SGC_Res","Birth_Date","Diags","SexNum") %>%
   dplyr::mutate(BrthYear = lubridate::year(Birth_Date),
                 CD_UID = substr(SGC_Res,1,4),
@@ -124,8 +205,8 @@ anom_l = anom %>%
                   grepl("^Q32", Diags) ~ "Congenital malformations of trachea and bronchus",
                   grepl("^Q33", Diags) ~ "Congenital malformations of lung",
                   grepl("^Q34", Diags) ~ "Other congenital malformations of respiratory system",
-                  grepl("^Q35", Diags) ~ "Cleft palate",
-                  grepl("^Q36", Diags) ~ "Cleft lip",
+                  grepl("^Q35", Diags) ~ "Cleft palate only",
+                  grepl("^Q36", Diags) ~ "Cleft lip only",
                   grepl("^Q37", Diags) ~ "Cleft palate with cleft lip",
                   grepl("^Q38", Diags) ~ "Other congenital malformations of tongue, mouth and pharynx",
                   grepl("^Q39", Diags) ~ "Congenital malformations of oesophagus",
@@ -189,7 +270,7 @@ anom_l = anom %>%
                                           " - ",
                                           cat_tier2)),
                 cat_tier3 = dplyr::case_when(
-                  grepl("^Q000$|Q0000$|Q01|Q05|Q760", Diags) ~ "Neural tube defects",
+                  grepl("^Q000$|Q0000$|Q01|Q05", Diags) ~ "Neural tube defects",
                   grepl("^Q02|Q03|Q041|Q042", Diags) ~ "Selected central nervous system defects",
                   grepl("^Q110|Q11$|Q111|Q112|Q160|Q172|Q16$|Q17$|Q30", Diags) ~ "Selected sense organ defects",
                   grepl("^Q200|Q20$|Q203|Q212|Q213|Q234|Q251", Diags) ~ "Selected congenital heart defects",
@@ -206,7 +287,7 @@ anom_l = anom %>%
                 cat_tier4 = dplyr::case_when(
                   grepl("^Q000$|Q0000$", Diags) ~ "(Q00) - Anencephaly and similar malformations",
                   grepl("^Q01", Diags) ~ "(Q01) - Encephalocele",
-                  grepl("^Q05|Q760", Diags) ~ "(Q05, Q76.0) - Spina bifida",
+                  grepl("^Q05", Diags) ~ "(Q05) - Spina bifida",
                   grepl("^Q02", Diags) ~ "(Q02) - Microcephaly",
                   grepl("^Q03", Diags) ~ "(Q03) - Congenital hydrocephalus",
                   grepl("^Q041|Q042", Diags) ~ "(Q04.1, Q04.2) - Arhinencephaly / Holoprosencephaly",
@@ -214,13 +295,13 @@ anom_l = anom %>%
                   grepl("^Q160|Q172|Q16$|Q17$", Diags) ~ "(Q16.0, Q17.2) - Anotia / Microtia",
                   grepl("^Q30", Diags) ~ "(Q30) - Choanal atresia",
                   grepl("^Q200|Q20$", Diags) ~ "(Q20.0) - Commom truncus",
-                  grepl("^Q203", Diags) ~ "(Q20.30-Q20.32, Q20.38) - Discordant ventriculoarterial connection",
+                  grepl("^Q203|Q201|Q205", Diags) ~ "(Q20.1, Q20.3, Q20.5) - Transposition of great vessels",
                   grepl("^Q212", Diags) ~ "(Q21.2) - Atrioventricular septal defect",
                   grepl("^Q213", Diags) ~ "(Q21.3) - Tetralogy of Fallot",
                   grepl("^Q234", Diags) ~ "(Q23.4) - Hypoplastic left heart syndrome",
                   grepl("^Q251", Diags) ~ "(Q25.1) - Coarctation of aorta",
-                  grepl("^Q35", Diags) ~ "(Q35) - Cleft palate",
-                  grepl("^Q36", Diags) ~ "(Q36) - Cleft lip",
+                  grepl("^Q35", Diags) ~ "(Q35) - Cleft palate only",
+                  grepl("^Q36", Diags) ~ "(Q36) - Cleft lip only",
                   grepl("^Q37", Diags) ~ "(Q37) - Cleft palate with cleft lip",
                   grepl("^Q39[0-4]", Diags) ~ "(Q39.0-Q39.4) - Oesophageal atresia / stenosis, tracheoesophageal fistula",
                   grepl("^Q41", Diags) ~ "(Q41) - Small intestine absence / atresia / stenosis",
@@ -229,7 +310,7 @@ anom_l = anom %>%
                   grepl("^Q442", Diags) ~ "(Q44.2) - Atresia of bile ducts",
                   grepl("^Q53[1-2]|Q539", Diags) ~ "(Q53.1, Q53.2, Q53.9) - Cryptorchidism / undescended testicles",
                   grepl("^Q54", Diags) ~ "(Q54, excluding Q54.4) - Hypospadias",
-                  grepl("^Q56", Diags) ~ "(Q56) - Indeterminate sex and pseudohermaphroditism",
+                  grepl("^Q56", Diags) ~ "(Q56) - Indeterminate sex",
                   grepl("^Q640", Diags) ~ "(Q64.0) - Epispadias",
                   grepl("^Q60[0-2]", Diags) ~ "(Q60.0-Q60.2) - Renal agenesis",
                   grepl("^Q61[1-5]|Q61[8-9]", Diags) ~ "(Q61.1-Q61.5, Q61.8, Q61.9) - Cystic kidney",
@@ -250,7 +331,7 @@ anom_l = anom %>%
                   SexNum %in% 2 ~ "F",
                   TRUE ~ "A"
                 )) %>%
-  dplyr::select("CaseID", "Post_Code", "Prov_Birth","Prov_res","SGC_Res",
+  dplyr::select("CaseID", "Post_Code", "Prov_Birth","Prov_Res","SGC_Res",
                 "Birth_Date","BrthYear","Mat_DoB","DeathD8","OutcomeNum","BWNum", "GANum","Diags","SexNum",
                 "Diags","cat_tier1", "cat_tier2","cat_tier3", "cat_tier4", "SrceIDs") %>%
   unique() %>%
@@ -263,14 +344,15 @@ anom_l = anom %>%
   .[order(CaseID, Post_Code, BrthYear, cat_tier2)]
 
 anom_l$idx_anom <- 1:nrow(anom_l)
-# anom_l$area <- ifelse(anom_l$SGC_Res %in% urb,
-#                       "Urban",
-#                       "Rural")
+# anom_l$area <- fcase(anom_l$SGC_Res %in% urb, "Urban",
+#                      !anom_l$SGC_Res %in% urb, "Rural",
+#                      default = "-1")
 
 #--------------------------------------------------------------------------------
 # Keeping only the variables that will be utilized and creating new variables
 # for further analysis
-# Filtering data after 1986 and those that have postal code (postal is the key to join with anomaly data)
+# Filtering data after 1986 because it is the min birth date for kids with Q code
+# anomalies and with postal code (postal is the key to join with anomaly data)
 #
 # NASOnly             =   'Documented Neonatal Abstinence Syndrome'
 # NAS                 =   'Documented NAS or Finnegan or ESC - Diagnosis'
@@ -290,8 +372,8 @@ anom_l$idx_anom <- 1:nrow(anom_l)
 #--------------------------------------------------------------------------------
 
 dta_nom <- dta[,.(
-  BIRTHID, CONTCTID, MOTHERID, DLPSTCOD, CountyNo, CSDuid,
-  DLCOUNTY, SACtype,BTBRTHOR,BTBrthDT, BrthYear, BTDethDT,
+  BIRTHID, CONTCTID, MOTHERID, DLPSTCOD, #CountyNo, DLCOUNTY, Cluster_Number,
+  DAuid,CSDuid, SACtype, BTBRTHOR, BTBrthDT, BrthYear, BTDethDT,
   BTOUTCOM, DLHSPDHA, DLHosp, BIRTHWT, GA_BEST,
   # Phenotypic sex
   BTSEX,
@@ -318,7 +400,7 @@ dta_nom <- dta[,.(
   # Smoke
   ADMITSMK, DLPRESMK, DLVS1SMK, SMOKE_20,
   # Alcohol Intake During Pregnancy (Y/N)
-  ALCOHOL,
+  ALCOHOL, Alcohol_Use,
   # Chemical Abuse
   MABUSC, MABUS,
   MxSmkngPrgnc,
@@ -437,7 +519,9 @@ dta_nom <- dta[,.(
   gestdiab = fcase(
     gdm_nsapd %in% 1 | gdm_icd %in% 1, 1,
     default = 0
-  ))] %>%
+  )
+  # Cluster_Number = stringr::str_pad(Cluster_Number, 6, pad = "0")
+  )] %>%
   .[, `:=` (bmipp = fcase(
      PrePBMI < 30, 1,
     # 18.5 <= PrePBMI & PrePBMI < 25, 2,
@@ -543,12 +627,12 @@ dta_nom <- dta[,.(
       OpdAbuse >= 1 | ( MABUSC %in% 'C02' ), 1, 
       default = 0
     ))] %>%
-  .[, `:=` (
-    Alcohol_Use = fcase(
-      R005_00100 >= 1 | R005_01800 >= 1 | R005_01900 >= 1 | R005_02000 >= 1 |
-        MF10 >= 1 | IP043 >= 1 | ( MABUSC %in% 'C01' ) | ( ALCOHOL %in% 'Y' ), 1, 
-      default = 0
-    ))] %>%
+  # .[, `:=` (
+  #   Alcohol_Use = fcase(
+  #     R005_00100 >= 1 | R005_01800 >= 1 | R005_01900 >= 1 | R005_02000 >= 1 |
+  #       MF10 >= 1 | IP043 >= 1 | ( MABUSC %in% 'C01' ) | ( ALCOHOL %in% 'Y' ), 1, 
+  #     default = 0
+  #   ))] %>%
   .[, `:=` (
     Cannabis_Use = fcase(
       R005_00700 >= 1 | R005_00900 >= 1, 1, 
@@ -596,54 +680,57 @@ dta_nom <- dta[,.(
   .[BrthYear >= min(anom_l$BrthYear) #&
       # !is.na(DLPSTCOD)
     ] %>%
-  .[,`:=` (CD_UID = fcase(
-    CountyNo %in% 1, 1201,
-    CountyNo %in% 2, 1202,
-    CountyNo %in% 3, 1203,
-    CountyNo %in% 4, 1204,
-    CountyNo %in% 5, 1205,
-    CountyNo %in% 6, 1206,
-    CountyNo %in% 7, 1207,
-    CountyNo %in% 8, 1208,
-    CountyNo %in% 9, 1209,
-    CountyNo %in% 10, 1210,
-    CountyNo %in% 11, 1211,
-    CountyNo %in% 12, 1212,
-    CountyNo %in% 13, 1213,
-    CountyNo %in% 14, 1214,
-    CountyNo %in% 15, 1215,
-    CountyNo %in% 16, 1216,
-    CountyNo %in% 17, 1217,
-    CountyNo %in% 18, 1218
-  )
+  # .[,`:=` (CD_UID = fcase(
+  #   CountyNo %in% 1, 1201,
+  #   CountyNo %in% 2, 1202,
+  #   CountyNo %in% 3, 1203,
+  #   CountyNo %in% 4, 1204,
+  #   CountyNo %in% 5, 1205,
+  #   CountyNo %in% 6, 1206,
+  #   CountyNo %in% 7, 1207,
+  #   CountyNo %in% 8, 1208,
+  #   CountyNo %in% 9, 1209,
+  #   CountyNo %in% 10, 1210,
+  #   CountyNo %in% 11, 1211,
+  #   CountyNo %in% 12, 1212,
+  #   CountyNo %in% 13, 1213,
+  #   CountyNo %in% 14, 1214,
+  #   CountyNo %in% 15, 1215,
+  #   CountyNo %in% 16, 1216,
+  #   CountyNo %in% 17, 1217,
+  #   CountyNo %in% 18, 1218
+  # )
   # area = fifelse(DLPSTCOD %in% urb_pc,
   #                "Urban",
   #                "Rural")
-  )] %>% 
+  # )] %>% 
   # .[, `:=` (cd.count_dlv = .N), by = list(BrthYear, CD_UID, dlv)] %>%
   unique()
 
-## It seems that some CountyNo do not have a match when looking into pccf
-## let's fix this:
-## 1 - match postal codes and compare CountyNo with CDUID
-## 2 - for those that are missing and different keep CDUID from pccf
-## 3 - for those that couldn't be matched, keep CD_UID from dta_nom
+## Fix CSDuid --------
+## 1 - match postal codes and compare CountyNo with CSDuid
+## 2 - for those that are missing and different keep CSDuid from pccf
+## 3 - for those that couldn't be matched, keep CSDuid from dta_nom
 
-dta1 <- unique(merge(dta_nom[,.(BIRTHID, DLPSTCOD, CD_UID)],
-              setDT(pccf)[,.(Postal_Code, CDUID)],
+dta1 <- unique(merge(dta_nom[,.(BIRTHID, DLPSTCOD, CSDuid, DAuid)],
+              setDT(pccf)[,.(PostalCode, CSDuid, DAuid)],
               by.x = "DLPSTCOD",
-              by.y = "Postal_Code",
+              by.y = "PostalCode",
               all.x = TRUE,
+              suffixes = c(".dta",".pccf"),
               allow.cartesian = TRUE))[,
-                `:=` (count = .N), by = list(BIRTHID)]
+                `:=` (count = .N), by = list(BIRTHID)][
+                  order(-DAuid.pccf)]
 
 ## If the IDs match or one is missing and the other is not keep them
 ## and consider them correct. Fix the others
 ## If both IDs are missing, nothing can be done.
 
-dta1 <- setDT(dta1)[,`:=` ( idx = fifelse((CD_UID == CDUID) |
-                (is.na(CD_UID) & !is.na(CDUID)) |
-                (!is.na(CD_UID) & is.na(CDUID)) ,
+dta1 <- setDT(dta1)[,`:=` ( idx = fifelse(
+  (CSDuid.dta == CSDuid.pccf) |
+  (is.na(CSDuid.dta) & !is.na(CSDuid.pccf)) |
+  (!is.na(CSDuid.dta) & is.na(CSDuid.pccf)) &
+  (substr(DAuid.dta, 1, 4) == substr(DAuid.pccf, 1, 4)),
               1,
               0))][order(BIRTHID,-idx)] %>% 
   unique(by = "BIRTHID")
@@ -658,28 +745,97 @@ dta1 <- dta1[idx %in% 0]
 
 ## If IDs are different, the one from 'pccf' should prevail
 
-dta1 <- dta1[,`:=` (CD_UID = CDUID)]
+dta1 <- dta1[,`:=` (CSDuid.dta = CSDuid.pccf,
+                    DAuid.dta = DAuid.pccf)]
 dta1 <- rbind(dta1,dta2)[order(BIRTHID)]
-dta_nom <- dta_nom[order(BIRTHID)][,CD_UID := NULL]
-dta_nom$CD_UID <- dta1$CD_UID
-  
+
+## If ID is missing on data but not missing on 'pccf'
+## bring ID from 'pccf'
+
+dta1 <- setDT(dta1)[,`:=` ( idx = fifelse((is.na(CSDuid.dta) & !is.na(CSDuid.pccf)) ,
+                                          1,
+                                          0))][order(BIRTHID,-idx)] 
+
+## those where CSDuid is NA unique(by = "BIRTHID")
+
+dta2 <- dta1[idx %in% 0]
+dta1 <- dta1[idx %in% 1]
+dta1 <- dta1[,`:=` (CSDuid.dta = CSDuid.pccf,
+                    DAuid.dta = DAuid.pccf)]
+dta1 <- rbind(dta1,dta2)[order(BIRTHID)]
+
+## put the CSDuid into dta
+
+dta_nom <- dta_nom[order(BIRTHID)]#[,CSDuid := NULL]
+dta_nom$CSDuid <- dta1$CSDuid.dta
+dta_nom$DAuid <- dta1$DAuid.dta
+
+# ****************************************
+# Add zone, clusters and network IDs -----
+# ****************************************
+
+dta_nom <- merge(dta_nom,
+             hlth2[,c("DA", "Cluster_Number")],
+             by.x = c("DAuid"),
+             by.y = c("DA"),
+             all.x = TRUE,
+             allow.cartesian = T) %>% 
+  .[order(BIRTHID)] %>% 
+  .[,`:=` (Cluster_Number = stringr::str_pad(Cluster_Number, 6, pad = "0"))]
+
+dta_nom <- unique(dta_nom, by = "BIRTHID")
+
+
 cd_lvb <- dta_nom[,.(BIRTHID, CONTCTID, MOTHERID, DLPSTCOD,
-                     CD_UID, CSDuid, BrthYear, dlv, BTSEX, bmipp, Cannabis_Use,
-                     diab, smoker, matage, Alcohol_Use)] %>% 
+                     DAuid,CSDuid, Cluster_Number, BrthYear, dlv, BTSEX, PrePBMI, bmipp, Cannabis_Use,
+                     diab, smoker, DMMATAGE, matage, Alcohol_Use)] %>% 
   # .[, `:=` (cd.count_dlv = .N), by = list(BrthYear, CD_UID, dlv)] %>%
   # .[order(BrthYear, CD_UID, dlv)] %>% 
   unique() %>% 
-  .[!is.na(CD_UID) &
+  .[!is.na(CSDuid) &
     !is.na(DLPSTCOD)] %>% 
-  .[,`:=` (area = fifelse(CSDuid %in% urb,
-                          "Urban",
-                          "Rural"),
-           BTSEX = dplyr::case_when(
+  .[,`:=` (area = fcase(
+    CSDuid %in% urb, "Urban",
+    !CSDuid %in% c(urb,NA), "Rural",
+    default = "-1"),
+    SexNum = dplyr::case_when(
              BTSEX %in% "M" ~ 1,
              BTSEX %in% "F" ~ 2,
              TRUE ~ -1
            ))]
+
+dta2 <- cd_lvb[!is.na(cd_lvb$Cluster_Number),c("BIRTHID","CSDuid","Cluster_Number")]
+dta1 <- cd_lvb[is.na(cd_lvb$Cluster_Number),c("BIRTHID","CSDuid")]
+dta1 <- merge(setDT(dta1),
+              unique(setDT(hlth)[,c("DAuid","CSDuid")]),
+              by = c("CSDuid"),
+              all.x = TRUE,
+              allow.cartesian = TRUE) %>% 
+  unique(by = "BIRTHID")
+
+dta1 <- merge(setDT(dta1),
+              unique(setDT(hlth2)[,c("DA","Cluster_Number")]),
+              by.x = "DAuid",
+              by.y = "DA",
+              all.x = TRUE,
+              allow.cartesian = TRUE) %>% 
+  unique(by = "BIRTHID")
+
+dta1$Cluster_Number <- ifelse(dta1$CSDuid %in% "1208003",
+                              "041454",
+                              ifelse(dta1$CSDuid %in% "1209019",
+                                     "041039",
+                                     ifelse(dta1$CSDuid %in% "1217008",
+                                            "030933",
+                                            ifelse(dta1$CSDuid %in% "1215005",
+                                                   "030827", dta1$Cluster_Number))))
+
+dta1 <- dta1[,c("BIRTHID", "CSDuid", "Cluster_Number")]
+dta1 <- setDT(rbind(dta2, dta1)) %>% 
+  .[order(BIRTHID)]
+
 cd_lvb$idx_cdlvb <- 1:nrow(cd_lvb)
+cd_lvb$Cluster_Number <- dta1$Cluster_Number
 
 ## Bring Atlee information to patients with anomaly
 
@@ -702,9 +858,9 @@ dta_anom <- merge(anom_l,
                   all.x = TRUE) %>%
   .[order(idx_anom)] %>%
   .[,c("BIRTHID", "MOTHERID", "CONTCTID", "CaseID", "DLHSPDHA", "DLHosp","BTOUTCOM",
-       "Post_Code", "SGC_Res", "CD_UID", "CSDuid", "DLCOUNTY","Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", 
-       "Diags","cat_tier1","cat_tier2","cat_tier3","cat_tier4", "idx_anom", "GA_BEST",
-       "DMMATAGE", "R004_00200","R004_00800", "R004_01300", "MDRUGC",
+       "Post_Code", "SGC_Res", "CSDuid", "Cluster_Number",#"CD_UID", "DLCOUNTY", 
+       "Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", "Diags","cat_tier1","cat_tier2","cat_tier3","cat_tier4", "idx_anom", "GA_BEST",
+       "DMMATAGE", "R004_00200","R004_00800", "R004_01300", "MDRUGC", "dlv",
        "smoker","bmipp","matage","diab", "NASOnly", "NAS_MRDx", "NAS", "Any_OAT", "NASorAny_OAT", 
        "RxOpioid", "OpdAbuse", "MatOpUse", "NOWS", "Rx_w_NAS_Poten", 
        "NonRx_w_NAS_Poten", "Alcohol_Use", "Cannabis_Use", "DrgNchmclAbus", 
@@ -755,9 +911,9 @@ d1 <- merge(anom_l[anom_l$idx_anom %in% d1$idx_anom],
             all.x = TRUE) %>%
   .[order(idx_anom)] %>%
   .[,c("BIRTHID", "MOTHERID", "CONTCTID", "CaseID", "DLHSPDHA", "DLHosp","BTOUTCOM",
-       "Post_Code", "SGC_Res", "CD_UID", "CSDuid", "DLCOUNTY", "Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", 
+       "Post_Code", "SGC_Res", "CSDuid", "Cluster_Number","Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum",#"DLCOUNTY","CD_UID",  
        "Diags","cat_tier1","cat_tier2","cat_tier3","cat_tier4", "idx_anom", "GA_BEST",
-       "DMMATAGE", "R004_00200","R004_00800", "R004_01300", "MDRUGC",
+       "DMMATAGE", "R004_00200","R004_00800", "R004_01300", "MDRUGC","dlv",
        "smoker","bmipp","matage","diab", "NASOnly", "NAS_MRDx", "NAS", "Any_OAT", "NASorAny_OAT", 
        "RxOpioid", "OpdAbuse", "MatOpUse", "NOWS", "Rx_w_NAS_Poten", 
        "NonRx_w_NAS_Poten", "Alcohol_Use", "Cannabis_Use", "DrgNchmclAbus", 
@@ -794,9 +950,9 @@ d1 <- merge(anom_l[anom_l$idx_anom %in% d1$idx_anom],
             all.x = TRUE) %>% 
   .[order(idx_anom)] %>%
   .[,c("BIRTHID", "MOTHERID", "CONTCTID", "CaseID", "DLHSPDHA", "DLHosp","BTOUTCOM",
-       "Post_Code", "SGC_Res", "CD_UID", "CSDuid", "DLCOUNTY", "Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", 
+       "Post_Code", "SGC_Res", "CSDuid", "Cluster_Number","Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", #"DLCOUNTY", "CD_UID",
        "Diags","cat_tier1","cat_tier2","cat_tier3","cat_tier4", "idx_anom", "GA_BEST",
-       "DMMATAGE", "R004_00200","R004_00800", "R004_01300", "MDRUGC",
+       "DMMATAGE", "R004_00200","R004_00800", "R004_01300", "MDRUGC","dlv",
        "smoker","bmipp","matage","diab", "NASOnly", "NAS_MRDx", "NAS", "Any_OAT", "NASorAny_OAT", 
        "RxOpioid", "OpdAbuse", "MatOpUse", "NOWS", "Rx_w_NAS_Poten", 
        "NonRx_w_NAS_Poten", "Alcohol_Use", "Cannabis_Use", "DrgNchmclAbus", 
@@ -835,9 +991,9 @@ d1 <- merge(anom_l[anom_l$idx_anom %in% d1$idx_anom],
             all.x = TRUE) %>%
   .[order(idx_anom)] %>%
   .[,c("BIRTHID", "MOTHERID", "CONTCTID", "CaseID", "DLHSPDHA", "DLHosp","BTOUTCOM",
-       "Post_Code", "SGC_Res", "CD_UID", "CSDuid", "DLCOUNTY", "Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", 
+       "Post_Code", "SGC_Res", "CSDuid", "Cluster_Number","Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", #"DLCOUNTY", "CD_UID",
        "Diags","cat_tier1","cat_tier2","cat_tier3","cat_tier4", "idx_anom", "GA_BEST",
-       "DMMATAGE", "R004_00200","R004_00800", "R004_01300", "MDRUGC",
+       "DMMATAGE", "R004_00200","R004_00800", "R004_01300", "MDRUGC","dlv",
        "smoker","bmipp","matage","diab", "NASOnly", "NAS_MRDx", "NAS", "Any_OAT", "NASorAny_OAT", 
        "RxOpioid", "OpdAbuse", "MatOpUse", "NOWS", "Rx_w_NAS_Poten", 
        "NonRx_w_NAS_Poten", "Alcohol_Use", "Cannabis_Use", "DrgNchmclAbus", 
@@ -877,9 +1033,9 @@ d1 <- merge(anom_l[anom_l$idx_anom %in% d1$idx_anom],
             all.x = TRUE) %>%
   .[order(idx_anom)] %>%
   .[,c("BIRTHID", "MOTHERID", "CONTCTID", "CaseID", "DLHSPDHA", "DLHosp","BTOUTCOM",
-       "Post_Code", "SGC_Res", "CD_UID", "CSDuid", "DLCOUNTY", "Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", 
+       "Post_Code", "SGC_Res", "CSDuid","Cluster_Number","Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", #"DLCOUNTY", "CD_UID",
        "Diags","cat_tier1","cat_tier2","cat_tier3","cat_tier4", "idx_anom", "GA_BEST",
-       "DMMATAGE", "R004_00200","R004_00800", "R004_01300", "MDRUGC",
+       "DMMATAGE", "R004_00200","R004_00800", "R004_01300", "MDRUGC","dlv",
        "smoker","bmipp","matage","diab", "NASOnly", "NAS_MRDx", "NAS", "Any_OAT", "NASorAny_OAT", 
        "RxOpioid", "OpdAbuse", "MatOpUse", "NOWS", "Rx_w_NAS_Poten", 
        "NonRx_w_NAS_Poten", "Alcohol_Use", "Cannabis_Use", "DrgNchmclAbus", 
@@ -920,9 +1076,9 @@ d1 <- merge(anom_l[anom_l$idx_anom %in% d1$idx_anom],
             all.x = TRUE) %>%
   .[order(idx_anom)] %>%
   .[,c("BIRTHID", "MOTHERID", "CONTCTID", "CaseID", "DLHSPDHA", "DLHosp","BTOUTCOM",
-       "Post_Code", "SGC_Res", "CD_UID", "CSDuid", "DLCOUNTY","Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", 
+       "Post_Code", "SGC_Res", "CSDuid", "Cluster_Number", "Birth_Date", "BrthYear", "SexNum", "Mat_DoB", "GANum", #"DLCOUNTY", "CD_UID",
        "Diags","cat_tier1","cat_tier2","cat_tier3","cat_tier4", "idx_anom", "GA_BEST",
-       "DMMATAGE", "R004_00200","R004_00800", "R004_01300", "MDRUGC",
+       "DMMATAGE", "R004_00200","R004_00800", "R004_01300", "MDRUGC","dlv",
        "smoker","bmipp","matage","diab", "NASOnly", "NAS_MRDx", "NAS", "Any_OAT", "NASorAny_OAT", 
        "RxOpioid", "OpdAbuse", "MatOpUse", "NOWS", "Rx_w_NAS_Poten", 
        "NonRx_w_NAS_Poten", "Alcohol_Use", "Cannabis_Use", "DrgNchmclAbus", 
@@ -944,46 +1100,47 @@ d1 <- dta_anom[!dta_anom$idx_anom %in% d2$idx_anom]
 anom_cd <- d2 %>% 
   .[#!is.na(CD_UID)
     ,
-    c("CaseID","BIRTHID","MOTHERID","CONTCTID","CD_UID", "CSDuid", "DLCOUNTY","Birth_Date",
-      "BrthYear", "DLHSPDHA", "DLHosp","SGC_Res","SexNum", "Diags","cat_tier1","cat_tier2","cat_tier3","cat_tier4",
+    c("CaseID","BIRTHID","MOTHERID","CONTCTID","CSDuid","Cluster_Number","Birth_Date", #"DLCOUNTY", "CD_UID",
+      "BrthYear", "DLHSPDHA", "DLHosp", "SGC_Res","SexNum", "Diags","cat_tier1","cat_tier2","cat_tier3","cat_tier4",
       "GA_BEST", "DMMATAGE", "R004_00200", "R004_00800", 
-      "R004_01300", "MDRUGC", "smoker", "bmipp","matage", "diab", 
+      "R004_01300", "MDRUGC", "dlv","smoker", "bmipp","matage", "diab", 
       "NASOnly", "NAS_MRDx", "NAS", "Any_OAT", "NASorAny_OAT", "RxOpioid", 
       "OpdAbuse", "MatOpUse", "NOWS", "Rx_w_NAS_Poten", "NonRx_w_NAS_Poten", 
       "Alcohol_Use", "Cannabis_Use", "DrgNchmclAbus", "Substance_Use", 
       "DnCAnoCan", "drugs", "SrceIDs")] %>% 
   unique() %>%
-  .[order(CaseID, BIRTHID,MOTHERID,CONTCTID, CD_UID, BrthYear, cat_tier2)] %>% 
+  .[order(CaseID, BIRTHID,MOTHERID,CONTCTID, CSDuid, BrthYear, cat_tier2)] %>% 
   # .[CD_UID > 1200 & CD_UID < 1299] %>% 
-  .[,`:=` (DLCOUNTY = factor(DLCOUNTY,
-                            #levels = unique(as.character(d2$DLCOUNTY)),
-                            labels = c(
-                              'ANN' = 'Annapolis',
-                              'ANT' = 'Antigonish',
-                              'CBT' = 'Cape Breton',
-                              'COL' = 'Colchester',
-                              'CUM' = 'Cumberland',
-                              'DIG' = 'Digby',
-                              'GUY' = 'Guysborough',
-                              'HAN' = 'Hants',
-                              'HFX' = 'Halifax',
-                              'INV' = 'Inverness',
-                              'KIN' = 'Kings',
-                              'LUN' = 'Lunenburg',
-                              'NBK' = 'New Brunswick',
-                              'NFD' = 'Newfoundland',
-                              'OTR' = 'Not Atlantic',
-                              'PEI' = 'Prince Edward Island',
-                              'PIC' = 'Pictou',
-                              'QNS' = 'Queens',
-                              'RMD' = 'Richmond',
-                              'SHB' = 'Shelburne',
-                              'VIC' = 'Victoria',
-                              'YAR' = 'Yarmouth')),
-           area = fifelse(SGC_Res %in% urb,
-                         "Urban",
-                         "Rural"),
-           DLHosp = factor(DLHosp,
+  .[,`:=` (
+    # DLCOUNTY = factor(DLCOUNTY,
+                            # #levels = unique(as.character(d2$DLCOUNTY)),
+                            # labels = c(
+                            #   'ANN' = 'Annapolis',
+                            #   'ANT' = 'Antigonish',
+                            #   'CBT' = 'Cape Breton',
+                            #   'COL' = 'Colchester',
+                            #   'CUM' = 'Cumberland',
+                            #   'DIG' = 'Digby',
+                            #   'GUY' = 'Guysborough',
+                            #   'HAN' = 'Hants',
+                            #   'HFX' = 'Halifax',
+                            #   'INV' = 'Inverness',
+                            #   'KIN' = 'Kings',
+                            #   'LUN' = 'Lunenburg',
+                            #   'NBK' = 'New Brunswick',
+                            #   'NFD' = 'Newfoundland',
+                            #   'OTR' = 'Not Atlantic',
+                            #   'PEI' = 'Prince Edward Island',
+                            #   'PIC' = 'Pictou',
+                            #   'QNS' = 'Queens',
+                            #   'RMD' = 'Richmond',
+                            #   'SHB' = 'Shelburne',
+                            #   'VIC' = 'Victoria',
+                            #   'YAR' = 'Yarmouth')),
+           area = fcase(CSDuid %in% urb, "Urban",
+                        !CSDuid %in% c(urb,NA), "Rural",
+                        default = "-1"),
+           DLHospName = factor(DLHosp,
                            labels = c(
                              "-15" = 'Sackville Memorial',
                              "-14" = 'Queen Elizabeth',
@@ -1027,15 +1184,157 @@ anom_cd <- d2 %>%
              TRUE ~ -1
            ))]
 
-## export datasets
+anom_cd$idx_anom <- 1:nrow(anom_cd)
 
-write.csv(setnames(cd_lvb,
-                   old = c("BTSEX", "CSDuid"),
-                   new = c("SexNum", "CSDUID")),
+## Adjust cluster numbers
+dta2 <- anom_cd[!is.na(anom_cd$Cluster_Number),c("idx_anom","CSDuid","Cluster_Number")]
+dta1 <- anom_cd[is.na(anom_cd$Cluster_Number),c("idx_anom","CSDuid")]
+dta1 <- merge(setDT(dta1),
+              unique(setDT(hlth)[,c("DAuid","CSDuid")]),
+              by = "CSDuid",
+              all.x = TRUE,
+              allow.cartesian = TRUE) %>% 
+  unique(by = "idx_anom")
+
+dta1 <- merge(setDT(dta1),
+              unique(setDT(hlth2)[,c("DA","Cluster_Number")]),
+              by.x = "DAuid",
+              by.y = "DA",
+              all.x = TRUE,
+              allow.cartesian = TRUE) %>% 
+  unique(by = "idx_anom")
+
+dta1$Cluster_Number <- ifelse(dta1$CSDuid %in% "1208003",
+                              "041454",
+                              ifelse(dta1$CSDuid %in% "1209019",
+                                     "041039",
+                                     ifelse(dta1$CSDuid %in% "1217008",
+                                            "030933",
+                                            ifelse(dta1$CSDuid %in% "1215005",
+                                                   "030827", dta1$Cluster_Number))))
+
+dta1 <- dta1[,c("idx_anom", "CSDuid", "Cluster_Number")]
+dta1 <- setDT(rbind(dta2, dta1)) %>% 
+  .[order(idx_anom)]
+
+anom_cd$Cluster_Number <- dta1$Cluster_Number
+
+## Bringing the names of CSD, CD, hn, cluster
+
+anom_cd <- anom_cd %>% 
+  mutate(CDuid = substr(CSDuid, 1, 4),
+         Cluster_Number = stringr::str_pad(Cluster_Number, 6, pad = "0"),
+         NetworkID = substr(Cluster_Number, 1, 4),
+         ZoneID = substr(Cluster_Number, 1, 2)) %>% 
+  merge(cd_shp[,c("GeoUID","name")],
+               by.x = "CDuid",
+               by.y = "GeoUID",
+               all.x = TRUE) %>%
+  merge(csd_shp[,c("GeoUID","name")],
+        by.x = "CSDuid",
+        by.y = "GeoUID",
+        all.x = TRUE) %>% 
+  merge(clus[,c("clusterid","cluster")],
+        by.x = "Cluster_Number",
+        by.y = "clusterid",
+        all.x = TRUE) %>% 
+  merge(hn[,c("network_id","network")],
+        by.x = "NetworkID",
+        by.y = "network_id",
+        all.x = TRUE) %>% 
+  dplyr::rename(c(CDName = name.x,
+                  CSDName = name.y,
+                  ClusterName = cluster,
+                  NetworkName = network)) %>% 
+  mutate(
+    CSDType = data.table::fcase(
+    tolower(stringr::str_extract(CSDName, "\\(([^()]*)\\)$")) %in% "(iri)" , "Indian reserve",
+    tolower(stringr::str_extract(CSDName, "\\(([^()]*)\\)$")) %in% "(md)" , "Municipal district",
+    tolower(stringr::str_extract(CSDName, "\\(([^()]*)\\)$")) %in% "(rgm)" , "Regional municipality",
+    tolower(stringr::str_extract(CSDName, "\\(([^()]*)\\)$")) %in% "(rm)" , "Rural municipality",
+    tolower(stringr::str_extract(CSDName, "\\(([^()]*)\\)$")) %in% "(sc)" , "Subdivision of county municipality",
+    tolower(stringr::str_extract(CSDName, "\\(([^()]*)\\)$")) %in% "(t)" , "Town"
+  ),
+  CSDName = stringr::str_remove(CSDName, "\\(([^()]*)\\)$"),
+  CDName = stringr::str_remove(CDName, " \\(CTY\\)"),
+  NetworkName = stringr::str_remove(NetworkName, " Comm H. Network"),
+  CSDuid = ifelse(CSDuid %in% c("1208001","1208002"),
+                  "1208003",
+                  CSDuid),
+  CSDName = ifelse(CSDuid %in% c("1208003"),
+                   "West Hants",
+                   CSDName),
+  ZnName = fcase(
+    ZoneID %in% "01", "Western",
+    ZoneID %in% "02", "Northern",
+    ZoneID %in% "03", "Eastern",
+    ZoneID %in% "04", "Central",
+    default = NA_character_
+  )) %>% 
+  arrange(CaseID, BIRTHID, MOTHERID, CONTCTID, Birth_Date)
+
+cd_lvb <- cd_lvb %>% 
+  mutate(CDuid = substr(CSDuid, 1, 4),
+         Cluster_Number = stringr::str_pad(Cluster_Number, 6, pad = "0"),
+         NetworkID = substr(Cluster_Number, 1, 4),
+         ZoneID = substr(Cluster_Number, 1, 2),
+         CSDuid = ifelse(CSDuid %in% c("1208001","1208002"),
+                         "1208003",
+                         CSDuid),
+         ) %>% 
+  merge(cd_shp[,c("GeoUID","name")],
+        by.x = "CDuid",
+        by.y = "GeoUID",
+        all.x = TRUE) %>%
+  merge(csd_shp[,c("GeoUID","name")],
+        by.x = "CSDuid",
+        by.y = "GeoUID",
+        all.x = TRUE) %>% 
+  merge(clus[,c("clusterid","cluster")],
+        by.x = "Cluster_Number",
+        by.y = "clusterid",
+        all.x = TRUE) %>% 
+  merge(hn[,c("network_id","network")],
+        by.x = "NetworkID",
+        by.y = "network_id",
+        all.x = TRUE) %>% 
+  dplyr::rename(c(CDName = name.x,
+                  CSDName = name.y,
+                  ClusterName = cluster,
+                  NetworkName = network)) %>% 
+  mutate(
+    CSDType = data.table::fcase(
+      tolower(stringr::str_extract(CSDName, "\\(([^()]*)\\)$")) %in% "(iri)" , "Indian reserve",
+      tolower(stringr::str_extract(CSDName, "\\(([^()]*)\\)$")) %in% "(md)" , "Municipal district",
+      tolower(stringr::str_extract(CSDName, "\\(([^()]*)\\)$")) %in% "(rgm)" , "Regional municipality",
+      tolower(stringr::str_extract(CSDName, "\\(([^()]*)\\)$")) %in% "(rm)" , "Rural municipality",
+      tolower(stringr::str_extract(CSDName, "\\(([^()]*)\\)$")) %in% "(sc)" , "Subdivision of county municipality",
+      tolower(stringr::str_extract(CSDName, "\\(([^()]*)\\)$")) %in% "(t)" , "Town"
+    ),
+    CSDName = stringr::str_remove(CSDName, "\\(([^()]*)\\)$"),
+    CDName = stringr::str_remove(CDName, " \\(CTY\\)"),
+    NetworkName = stringr::str_remove(NetworkName, " Comm H. Network"),
+    ZnName = fcase(
+      ZoneID %in% "01", "Western",
+      ZoneID %in% "02", "Northern",
+      ZoneID %in% "03", "Eastern",
+      ZoneID %in% "04", "Central",
+      default = NA_character_
+    )
+  ) %>% 
+  arrange(BIRTHID, MOTHERID, CONTCTID)
+  
+  
+
+write.csv(cd_lvb,
           "H:/RCP/RCP_Data/TeixeiEC/Anomalies/anomaly-app-overview/data/cd_birth.csv")
+
+arrow::write_parquet(cd_lvb,
+                     "H:/RCP/RCP_Data/TeixeiEC/Anomalies/anomaly-app-overview/data/cd_birth.parquet")
 
 write.csv(anom_cd,
           "H:/RCP/RCP_Data/TeixeiEC/Anomalies/anomaly-app-overview/data/cd_anomaly.csv")
 
-
+arrow::write_parquet(anom_cd,
+                     "H:/RCP/RCP_Data/TeixeiEC/Anomalies/anomaly-app-overview/data/cd_anomaly.parquet")
 

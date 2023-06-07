@@ -56,8 +56,8 @@ body .wrapper > .content-wrapper > .content > .tab-content > .tab-pane {
 }
 
 .main-content-grid.advanced-grid {
-  grid-template-areas: "lm1       lm1       lm2       lm2       lm3       lm3" "map       map       map       table     table     table" "linechart linechart linechart linechart linechart linechart" "barchart  barchart  barchart  barchart  barchart  barchart";
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-areas: "lm1       lm1       lm2       lm2       lm3       lm3       lm4          lm4" "map       map       map       map       table     table     table      table" "linechart linechart linechart linechart linechart linechart linechart linechart" "barchart  barchart  barchart  barchart  barchart  barchart  barchart  barchart";
+  grid-template-columns: repeat(8, 1fr);
   grid-template-rows: auto repeat(1, 480px);
 }
 
@@ -68,13 +68,13 @@ body .wrapper > .content-wrapper > .content > .tab-content > .tab-pane {
     grid-template-rows: repeat(2, auto) repeat(2, 480px);
   }
   .main-content-grid.advanced-grid {
-    grid-template-areas: "lm1       lm2       lm3" "map       map       map" "table     table     table" "barchart  barchart  barchart" "linechart linechart linechart";
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-areas: "lm1       lm2       lm3       lm4" "map       map       map       map" "table     table     table     table" "barchart  barchart  barchart  barchart" "linechart linechart linechart linechart";
+    grid-template-columns: repeat(4, 1fr);
     grid-template-rows: auto 480px repeat(1, 480px);
   }
 }
 
-#intro {
+#intro, #intro_btn {
   margin-bottom: 0;
   align-items: center;
   display: block;
@@ -83,6 +83,12 @@ body .wrapper > .content-wrapper > .content > .tab-content > .tab-pane {
   color: white;
   min-width: 25%;
   border-color: white;
+}
+
+#risk_info, #line_info {
+  background: #008d8b;
+  color: white;
+  border-color: #EBF3F2;
 }
 
 .optgroup-header {
@@ -194,6 +200,13 @@ body .wrapper > .content-wrapper > .content > .tab-content > .tab-pane {
   color: #008d8b;
   font-weight: 400;
   font-size: 18px;
+  margin: 0;
+}
+
+.wrapper .main-header .navbar > .navbar-custom-menu > .navbar-nav .dropdown.help > p {
+  color: #008d8b;
+  font-weight: 400;
+  font-size: 18px !important;
   margin: 0;
 }
 
@@ -358,7 +371,7 @@ body .wrapper > .content-wrapper > .content > .tab-content > .tab-pane {
 }
 
 .box.metric-global-4 .icon {
-  background-image: url("../images/pediatrics.svg");
+  background-image: url("../images/nsmap.svg");
 }
 
 .box.metric-local-1 {
@@ -390,7 +403,7 @@ body .wrapper > .content-wrapper > .content > .tab-content > .tab-pane {
 }
 
 .box.metric-local-4 .icon {
-  background-image: url("../images/pediatrics.svg");
+  background-image: url("../images/nsmap.svg");
 }
 
 .map-grid-wrapper > div,

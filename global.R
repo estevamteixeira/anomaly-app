@@ -1,4 +1,5 @@
 # Load all packages
+library(arrow)
 library(data.table)
 library(dplyr)
 library(geojsonsf)
@@ -18,9 +19,9 @@ library(tidyverse)
 
 # Modules
 map_view <- use("modules/map_view.R")
-global_metrics_view <- use("modules/global_metrics_view.R")
+# global_metrics_view <- use("modules/global_metrics_view.R")
 local_metrics_view <- use("modules/local_metrics_view.R")
-county_view <- use("modules/county_view.R")
+table_view <- use("modules/table_view.R")
 line_view <- use("modules/line_view.R")
 # dlv_view <- use("modules/dlvhosp_view.R")
 upset_view <- use("modules/upsetPlot_view.R")

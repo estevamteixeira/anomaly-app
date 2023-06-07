@@ -26,14 +26,28 @@ function(input, output, session){
     ))
   })
   
-  ## Remove modal when clicking th button
+  ## Remove modal when clicking the button
   
+  # observeEvent(input$intro,{
+  #   removeModal()
+  # })
+  # 
+  # show intro tour
   observeEvent(input$intro,{
+    ## Remove modal when clicking the button
     removeModal()
+    ## Start intro tour
+               introjs(session,
+                       options = list("nextLabel" = "Continue",
+                                      "prevLabel" = "Previous",
+                                      "doneLabel" = "Alright. Let's go",
+                                      "skipLabel" = "Skip",
+                                      showStepNumbers = TRUE))
   })
   
-  # show intro tour
-  observeEvent(input$intro,
+  # show intro tour when pressing the introduction button
+  # on the sidebar
+  observeEvent(input$intro_btn,
                introjs(session,
                        options = list("nextLabel" = "Continue",
                                       "prevLabel" = "Previous",
@@ -41,6 +55,8 @@ function(input, output, session){
                                       "skipLabel" = "Skip",
                                       showStepNumbers = TRUE))
   )
+  
+  
   
   # Using a "server-side selectize" option that massively improves 
   # performance and efficiency (for large numbers of choices)
@@ -52,6 +68,7 @@ function(input, output, session){
   )
   
   ## Update the options for the initial year selectInput
+  ## The values should reflect the data availability
   observeEvent(input$icd10,{
     
     if (!input$icd10 %in% 0 &
@@ -82,7 +99,7 @@ function(input, output, session){
   }
   })
   
-  ## Make the final year option to be greater than or equal the
+  ## Make the final year option greater than or equal the
   ## initial year option
   observeEvent(c(input$icd10, input$init_time),{
     
@@ -93,7 +110,8 @@ function(input, output, session){
         inputId = "end_time",
         choices = c(sort(unique(consts$cd_anom$BrthYear[
           consts$cd_anom$cat_tier4 %in% input$icd10])))[
-            c(sort(unique(consts$cd_anom$BrthYear))) >= input$init_time],
+            c(sort(unique(consts$cd_anom$BrthYear[
+              consts$cd_anom$cat_tier4 %in% input$icd10]))) >= input$init_time],
         selected = c(max(consts$cd_anom$BrthYear[
           consts$cd_anom$cat_tier4 %in% input$icd10]))
       )
@@ -104,7 +122,8 @@ function(input, output, session){
         inputId = "end_time",
         choices = c(sort(unique(consts$cd_anom$BrthYear[
           consts$cd_anom$cat_tier3 %in% input$icd10])))[
-            c(sort(unique(consts$cd_anom$BrthYear))) >= input$init_time],
+            c(sort(unique(consts$cd_anom$BrthYear[
+              consts$cd_anom$cat_tier3 %in% input$icd10]))) >= input$init_time],
         selected = c(max(consts$cd_anom$BrthYear[
           consts$cd_anom$cat_tier3 %in% input$icd10]))
       )} else {
@@ -122,56 +141,59 @@ function(input, output, session){
   initial_year <- reactive({ input$init_time})
   final_year <- reactive({ input$end_time})
   condition <- reactive({ input$icd10})
+  geography <- reactive({ input$geo})
   
-  session$userData$county_view <- county_view$init_server(
-    "county_advanced_view",
-    df = consts$cd_anom,
+  session$userData$table_view <- table_view$init_server(
+    "table_advanced_view",
+    df1 = consts$cd_anom,
+    df2 = consts$cd_birth,
     y1 = initial_year,
     y2 = final_year,
-    q = condition
+    q = condition,
+    lim = geography
   )
   
   # global_metrics_view$init_server("global_metrics_advanced_view")
   
   # local_metrics_view$init_server("local_metrics_advanced_view")
+  
   session$userData$local_metrics_view <- local_metrics_view$init_server(
     "local_metrics_advanced_view",
-    df = consts$cd_anom,
+    df1 = consts$cd_anom,
+    df2 = consts$cd_birth,
     y1 = initial_year,
     y2 = final_year,
-    q = condition
+    q = condition,
+    lim = geography
   )
   
   session$userData$map_view <- map_view$init_server(
     "map_advanced_view",
-    df = consts$cd_anom,
+    df1 = consts$cd_anom,
+    df2 = consts$cd_birth,
     y1 = initial_year,
     y2 = final_year,
-    q = condition
+    q = condition,
+    lim = geography
   )
   
     session$userData$line_view <- line_view$init_server(
     "line_advanced_view",
-    df = consts$cd_anom,
+    df1 = consts$cd_anom,
+    df2 = consts$cd_birth,
     y1 = initial_year,
     y2 = final_year,
-    q = condition
+    q = condition,
+    lim = geography
   )
-    
-    # session$userData$upset_view <- dlv_view$init_server(
-    #   "bar_advanced_view",
-    #   df = consts$cd_anom,
-    #   y1 = initial_year,
-    #   y2 = final_year,
-    #   q = condition
-    # )
     
     session$userData$upset_view <- upset_view$init_server(
       "bar_advanced_view",
-      df = consts$cd_anom,
+      df1 = consts$cd_anom,
       y1 = initial_year,
       y2 = final_year,
-      q = condition
+      q = condition,
+      lim = geography
     )
   
 }

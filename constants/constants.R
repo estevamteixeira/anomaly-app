@@ -28,22 +28,56 @@ key = "CensusMapper_f505397ff4bb63467541085d028c9be8"
 
 # importing data sets
 
-cd_anom <- read.csv("./data/cd_anomaly.csv", header = TRUE, stringsAsFactors = TRUE) |> 
-  dplyr::mutate(CD_UID = as.character(CD_UID),
-                Birth_Date = as.Date(as.character(Birth_Date))) |>
+cd_anom <- readr::read_csv("./data/cd_anomaly.csv") |>
   ## filtering only NS counties
-  dplyr::filter(dplyr::between(CD_UID, 1201, 1299)) |> 
+  dplyr::filter(dplyr::between(CSDuid, 1201000, 1299999)) |>
+  dplyr::filter(!substr(CSDuid, 5, 8) %in% "999") |> 
+  dplyr::mutate(CSDuid = as.character(CSDuid),
+                Birth_Date = as.Date(as.character(Birth_Date)),
+                CDuid = substr(CSDuid, 1, 4),
+                Cluster_Number = stringr::str_pad(Cluster_Number, 6, pad = "0"),
+                NetworkID = substr(Cluster_Number, 1, 4),
+                ZoneID = substr(Cluster_Number, 1, 2),
+                CSDuid = ifelse(CSDuid %in% c("1208001","1208002"),
+                                "1208003",
+                                CSDuid),
+                CSDName = ifelse(CSDuid %in% c("1208003"),
+                                 "West Hants",
+                                 CSDName),
+                CSDType = ifelse(CSDuid %in% c("1208003"),
+                                 "Rural municipality",
+                                 CSDType),
+                SexNum = as.numeric(SexNum)) |>
   data.table::setDT()
 
-cd_birth <- read.csv("./data/cd_birth.csv", header = TRUE, stringsAsFactors = TRUE) |> 
-  dplyr::mutate(CD_UID = as.character(CD_UID)) |>
+cd_birth <- readr::read_csv("./data/cd_birth.csv") |>
   ## filtering only NS counties
-  dplyr::filter(dplyr::between(CD_UID, 1201, 1299)) |>
+  dplyr::filter(dplyr::between(CSDuid, 1201000, 1299999)) |>
+  dplyr::filter(!substr(CSDuid, 5, 8) %in% "999") |>
+  dplyr::mutate(CSDuid = as.character(CSDuid),
+                CDuid = substr(CSDuid, 1, 4),
+                Cluster_Number = stringr::str_pad(Cluster_Number, 6, pad = "0"),
+                NetworkID = substr(Cluster_Number, 1, 4),
+                ZoneID = substr(Cluster_Number, 1, 2),
+                CSDuid = ifelse(CSDuid %in% c("1208001","1208002"),
+                                "1208003",
+                                CSDuid),
+                CSDName = ifelse(CSDuid %in% c("1208003"),
+                                "West Hants",
+                                CSDName),
+                CSDType = ifelse(CSDuid %in% c("1208003"),
+                                 "Rural municipality",
+                                 CSDType),
+                SexNum = dplyr::case_when(
+                  BTSEX %in% "M" ~ 1,
+                  BTSEX %in% "F" ~ 2,
+                  BTSEX %in% "A" ~ -1
+                )) |>
   data.table::setDT()
 
 ## Help and intro data
-steps <- read.csv("data/help.csv")
-intro <- read.csv("data/intro.csv")
+# steps <- readr::read_csv("data/help.csv")
+intro <- readr::read_csv("data/intro.csv")
 
 # Import shapefiles
 # Convert them to 'data.tables' by reference
@@ -80,7 +114,30 @@ cd_shp <- data.table::setDT(cancensus::get_census(
        "Population 2016", "Population", "Households 2016",
        "Households", "Shape Area", "geometry")]
 
-cd_names <- data.frame(CD_UID = cd_shp$GeoUID, cd_full = cd_shp$name)
+# cd_names <- data.frame(CD_UID = cd_shp$GeoUID, cd_full = cd_shp$name)
+
+## Community clusters -----
+## Community Health Networks
+## Management Zones
+
+clus <- data.table::setDT(
+  sf::read_sf(
+    "H:\\RCP\\RCP_Data\\TeixeiEC\\NS_Maps\\NSC_Clusters\\geo_export_0ed8251f-dbd5-4090-88ef-66c84d140e53.shp") %>%
+    sf::st_make_valid()
+  )
+
+hn <- data.table::setDT(
+  sf::read_sf(
+    "H:\\RCP\\RCP_Data\\TeixeiEC\\NS_Maps\\NSC_HealthNetwork\\geo_export_6985c353-2399-43a2-9514-d47b553341c2.shp") %>%
+    dplyr::mutate(network = stringr::str_remove(network, " Comm H. Network")) %>% 
+    sf::st_make_valid()
+)
+
+# urb_shp <- data.table::setDT(
+#   sf::read_sf(
+#     "H:\\RCP\\RCP_Data\\TeixeiEC\\NS_Maps\\NSC_Urban\\urban_boundary.shp") %>%
+#     sf::st_make_valid()
+# )
 
 # Colors
 colors <- list(
@@ -104,30 +161,30 @@ metrics_list <- list(
     value = paste(scales::comma(
       nrow(unique(
           cd_birth[tolower(dlv) %in% c("lvb", "stillbirth"),
-                   .(BIRTHID, BrthYear, CD_UID)])),
+                   .(BIRTHID, BrthYear, CSDuid)])),
       accuracy = 1), "total births")
   ),
   anomalies = list(
     label = "Number of registered congenital anomalies",
     value = paste(scales::comma(
       nrow(unique(
-        cd_anom[, .(CaseID, BrthYear, CD_UID, Diags)])),
+        cd_anom[, .(CaseID, BrthYear, CSDuid, Diags)])),
       accuracy = 1), "records")
   ),
   rate = list(
     label = "Prevalence <br> (* cases per 1,000 live births)",
     value = scales::comma(
       1000*nrow(unique(
-        cd_anom[, .(CaseID, BrthYear, CD_UID, Diags)]))/nrow(unique(
+        cd_anom[, .(CaseID, BrthYear, CSDuid, Diags)]))/nrow(unique(
           cd_birth[tolower(dlv) %in% c("lvb", "stillbirth"),
-                   .(BIRTHID, BrthYear, CD_UID)])),
+                   .(BIRTHID, BrthYear, CSDuid)])),
       accuracy = 0.1)
   ),
   infants = list(
     label = "Number of infants diagnosed",
     value = paste(scales::comma(
       nrow(unique(
-        cd_anom[, .(CaseID, BrthYear, CD_UID)])),
+        cd_anom[, .(CaseID, BrthYear, CSDuid)])),
       accuracy = 1), "infants")
   )
 )
@@ -137,8 +194,8 @@ metrics_list <- list(
 
 icd10_opts <- list(
   "0",
-  c(as.character(unique(cd_anom[grepl("^Q000$|Q0000$|Q01|Q05|Q760", Diags)]$cat_tier3)),
-    sort(as.character(unique(cd_anom[grepl("^Q000$|Q0000$|Q01|Q05|Q760", Diags)]$cat_tier4)))),
+  c(as.character(unique(cd_anom[grepl("^Q000$|Q0000$|Q01|Q05", Diags)]$cat_tier3)),
+    sort(as.character(unique(cd_anom[grepl("^Q000$|Q0000$|Q01|Q05", Diags)]$cat_tier4)))),
   c(as.character(unique(cd_anom[grepl("^Q02|Q03|Q041|Q042", Diags)]$cat_tier3)),
     sort(as.character(unique(cd_anom[grepl("^Q02|Q03|Q041|Q042", Diags)]$cat_tier4)))),
   c(as.character(unique(cd_anom[grepl("^Q110|Q11$|Q111|Q112|Q160|Q172|Q16$|Q17$|Q30", Diags)]$cat_tier3)),
@@ -165,7 +222,7 @@ icd10_opts <- list(
 
 names(icd10_opts) <- c(
   "All conditions",
-  as.character(unique(cd_anom[grepl("^Q000$|Q0000$|Q01|Q05|Q760", Diags)]$cat_tier3)),
+  as.character(unique(cd_anom[grepl("^Q000$|Q0000$|Q01|Q05", Diags)]$cat_tier3)),
   as.character(unique(cd_anom[grepl("^Q02|Q03|Q041|Q042", Diags)]$cat_tier3)),
   as.character(unique(cd_anom[grepl("^Q110|Q11$|Q111|Q112|Q160|Q172|Q16$|Q17$|Q30", Diags)]$cat_tier3)),
   as.character(unique(cd_anom[grepl("^Q200|Q20$|Q203|Q212|Q213|Q234|Q251", Diags)]$cat_tier3)),
@@ -179,9 +236,10 @@ names(icd10_opts) <- c(
   as.character(unique(cd_anom[grepl("^Q909|Q90$|Q91[4-7]|Q91[0-3]|Q96", Diags)]$cat_tier3))
 )
 
-risk_opts <- sort(c("SexNum","matage","smoker","bmipp","diab","Cannabis_Use","Alcohol_Use","area"))
+risk_opts <- sort(c("SexNum","matage","smoker","bmipp","diab","Cannabis_Use","Alcohol_Use"#,"area"
+                    ))
 names(risk_opts) <- c("Alcohol Use",
-                      "Location",
+                      # "Location",
                       "BMI",
                       "Cannabis Use",
                       "Diabetes",
@@ -189,6 +247,17 @@ names(risk_opts) <- c("Alcohol Use",
                       "Fetal Sex",
                       "Smoking Use")
 risk_opts <- risk_opts[order(names(risk_opts))]
+
+geo_opts <- c("csd","cd", "clus", "hn", #"zn",
+              "urb")
+names(geo_opts) <- c("Municipalities (CSD)",
+                     "Counties (CD)",
+                     "Community clusters",
+                     "Community health networks",
+                     # "Management Zones",
+                     "Urban-rural"
+                     )
+
 
 rcp_logo <- tags$a(
   href = rcp_website,

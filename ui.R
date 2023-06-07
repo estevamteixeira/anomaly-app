@@ -59,7 +59,25 @@ dashboardPage(
              )
       )
     #disable = TRUE
-    ))
+    )),
+    ## Add horizontal gray line to separate inputs
+    tags$hr(style = "border-top: 4px solid #E3E7E9;"),
+    selectInput(
+      inputId = "geo",
+      label = shiny::HTML(
+        "<p><span style='color: #008d8b'>Geography</span></p>" 
+      ),
+      choices = c(consts$geo_opts),
+      selected = c(consts$geo_opts["csd"])
+    ),
+    ## Add horizontal gray line to separate inputs
+    tags$hr(style = "border-top: 4px solid #E3E7E9;"),
+    ## Add introduction tour button
+    tagList(
+      actionButton(inputId = "intro_btn",
+                   label = "Introduction Tour",
+                   icon = icon("info-circle"))
+    )
   )),
   dashboardBody(
     tags$head(
@@ -81,24 +99,21 @@ dashboardPage(
       tags$div(
         class = "main-content-grid advanced-grid",
         # global_metrics_view$ui("global_metrics_advanced_view"),
-        div(
-          class = "map-grid-wrapper",
-          map_view$ui("map_advanced_view")
-        ),
-        div(
-          class = "table-grid-wrapper",
-          county_view$ui("county_advanced_view")
-        ),
-        div(class = "line-grid-wrapper",
-            line_view$ui("line_advanced_view")
-        ),
-        # div(class = "barchart-grid-wrapper",
-        #     dlv_view$ui("bar_advanced_view")
-        # ),
-        div(class = "barchart-grid-wrapper",
-            upset_view$ui("bar_advanced_view")
-        ),
-        local_metrics_view$ui("local_metrics_advanced_view")
+      div(
+        class = "map-grid-wrapper",
+        map_view$ui("map_advanced_view")
+      ),
+      div(
+        class = "table-grid-wrapper",
+        table_view$ui("table_advanced_view")
+      ),
+      div(class = "line-grid-wrapper",
+          line_view$ui("line_advanced_view")
+      ),
+      div(class = "barchart-grid-wrapper",
+          upset_view$ui("bar_advanced_view")
+      ),
+      local_metrics_view$ui("local_metrics_advanced_view")
       )
     ),
     # You are not supposed to remove or modify this footer

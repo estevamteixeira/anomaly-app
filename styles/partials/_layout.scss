@@ -50,11 +50,11 @@ body {
 
   &.advanced-grid {
     grid-template-areas:
-      "lm1       lm1       lm2       lm2       lm3       lm3"
-      "map       map       map       table     table     table"
-      "linechart linechart linechart linechart linechart linechart"
-      "barchart  barchart  barchart  barchart  barchart  barchart";
-    grid-template-columns: repeat(6, 1fr);
+      "lm1       lm1       lm2       lm2       lm3       lm3       lm4          lm4"
+      "map       map       map       map       table     table     table      table"
+      "linechart linechart linechart linechart linechart linechart linechart linechart"
+      "barchart  barchart  barchart  barchart  barchart  barchart  barchart  barchart";
+    grid-template-columns: repeat(8, 1fr);
     grid-template-rows: auto repeat(1, 480px)
   }
   
@@ -74,17 +74,17 @@ body {
   
     &.advanced-grid {
       grid-template-areas:
-        "lm1       lm2       lm3"
-        "map       map       map"
-        "table     table     table"
-        "barchart  barchart  barchart"
-        "linechart linechart linechart";
-      grid-template-columns: repeat(3, 1fr);
+        "lm1       lm2       lm3       lm4"
+        "map       map       map       map"
+        "table     table     table     table"
+        "barchart  barchart  barchart  barchart"
+        "linechart linechart linechart linechart";
+      grid-template-columns: repeat(4, 1fr);
       grid-template-rows: auto 480px repeat(1, 480px);
     }
   }
 }
-#intro {
+#intro, #intro_btn {
     margin-bottom: 0;
     align-items: center;
     display: block;
@@ -94,6 +94,13 @@ body {
     min-width: 25%;
     border-color: white
 }
+
+#risk_info, #line_info {
+    background: $color-secondary;
+    color: white;
+    border-color: $color-terciary
+}
+
 .optgroup-header {
         font-size: 14px !important;
         font-weight: bold;

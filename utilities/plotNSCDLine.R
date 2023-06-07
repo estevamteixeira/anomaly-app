@@ -1,3 +1,4 @@
+## lineplot for total -------
 plot_line <- function(data, var){
   # Use 'import' from the 'modules' package.
   # These listed imports are made available inside the module scope.
@@ -9,9 +10,9 @@ plot_line <- function(data, var){
   var <- unlist(var)
   
   if(any(names(dta) %in% c("ntc","ntlvb"))){
-    names(dta)[which(names(dta) %in% c("ntc","ntlvb"))] <- c("total_cases", "total_lvb")
-  } else if(any(names(dta) %in% c("total_lvb_cd"))){
-    names(dta)[which(names(dta) %in% c("total_lvb_cd"))] <- c("total_lvb")
+    names(dta)[which(names(dta) %in% c("ntc","ntlvb"))] <- c("total_cases_geo_yr", "total_lvb")
+  } else if(any(names(dta) %in% c("total_lvb_geo"))){
+    names(dta)[which(names(dta) %in% c("total_lvb_geo"))] <- c("total_lvb")
   }
   
   pal <- "#008D8B"
@@ -23,17 +24,17 @@ plot_line <- function(data, var){
     type = "scatter",
     mode = "lines+markers",
     hovertemplate = ~paste(
-      "<b>", cd_full, "-", BrthYear, "</b>",
+      "<b>", Name, "-", BrthYear, "</b>",
       "<br> Total reported cases:",
-      ifelse(total_cases < 5,
+      ifelse(total_cases_geo_yr < 5,
              "< 5",
-             as.character(scales::comma(total_cases,
+             as.character(scales::comma(total_cases_geo_yr,
                           accuracy = 1))),
-      "<br> Total births:",
-      ifelse(total_lvb < 5,
-             "< 5",
-             as.character(scales::comma(total_lvb,
-                          accuracy = 1))),
+      # "<br> Total births:",
+      # ifelse(total_lvb < 5,
+      #        "< 5",
+      #        as.character(scales::comma(total_lvb,
+      #                     accuracy = 1))),
       "<br> Prevalence (*cases per 1,000 total births):",
               scales::comma(.data[[var]],
                             accuracy = 0.1),
@@ -94,8 +95,8 @@ plot_line <- function(data, var){
                      "zoom2d",
                      "pan2d",
                      "lasso2d",
-                     "autoScale2d",
-                     "resetScale2d",
+                     # "autoScale2d",
+                     # "resetScale2d",
                      "hoverClosestCartesian",
                      "hoverCompareCartesian"
                    ))
@@ -107,7 +108,7 @@ plot_line <- function(data, var){
   #                    y = !!sym(var),
   #                    group = 1,
   #                    text = paste(
-  #                    "<b>",cd_full, "-", BrthYear, "</b>",
+  #                    "<b>",Name, "-", BrthYear, "</b>",
   #                    "<br> Total reported cases:",
   #                    ifelse(total_cases < 5,
   #                           "< 5",
@@ -150,6 +151,7 @@ plot_line <- function(data, var){
   
 }
 
+## Lineplot when there is risk -----
 plot_risk_line <- function(data, var, risk){
   # Use 'import' from the 'modules' package.
   # These listed imports are made available inside the module scope.
@@ -162,7 +164,7 @@ plot_risk_line <- function(data, var, risk){
   rsk <- unlist(risk)
   
   if(any(names(dta) %in% c("ntc","ntlvb"))){
-    names(dta)[which(names(dta) %in% c("ntc","ntlvb"))] <- c("total_cases", "total_lvb")
+    names(dta)[which(names(dta) %in% c("ntc","ntlvb"))] <- c("total_cases_geo_yr_risk", "total_lvb")
   } else if(any(names(dta) %in% c("total_lvb_cd"))){
     names(dta)[which(names(dta) %in% c("total_lvb_cd"))] <- c("total_lvb")
   }
@@ -254,22 +256,22 @@ plot_risk_line <- function(data, var, risk){
                   y = ~.data[[var]],
                   type = "scatter",
                   mode = "lines+markers",
-                  linetype = ~.data[[rsk]],
+                  # linetype = ~.data[[rsk]],
                   color = ~.data[[rsk]],
                   colors = pal,
                   symbol = ~.data[[rsk]],
                   hovertemplate = ~paste(
-                    "<b>", cd_full, "-", BrthYear, "<br>", .data[[rsk]], "</b>",
+                    "<b>", Name, "-", BrthYear, "<br>", .data[[rsk]], "</b>",
                     "<br> Total reported cases:",
-                    ifelse(total_cases < 5,
+                    ifelse(total_cases_geo_yr_risk < 5,
                            "< 5",
-                           as.character(scales::comma(total_cases,
+                           as.character(scales::comma(total_cases_geo_yr_risk,
                                                       accuracy = 1))),
-                    "<br> Total births:",
-                    ifelse(total_lvb < 5,
-                           "< 5",
-                           as.character(scales::comma(total_lvb,
-                                                      accuracy = 1))),
+                    # "<br> Total births:",
+                    # ifelse(total_lvb < 5,
+                    #        "< 5",
+                    #        as.character(scales::comma(total_lvb,
+                    #                                   accuracy = 1))),
                     "<br> Prevalence (*cases per 1,000 total births):",
                     scales::comma(.data[[var]],
                                   accuracy = 0.1),
@@ -329,8 +331,8 @@ plot_risk_line <- function(data, var, risk){
                      "zoom2d",
                      "pan2d",
                      "lasso2d",
-                     "autoScale2d",
-                     "resetScale2d",
+                     # "autoScale2d",
+                     # "resetScale2d",
                      "hoverClosestCartesian",
                      "hoverCompareCartesian"
                    ))
@@ -342,7 +344,7 @@ plot_risk_line <- function(data, var, risk){
   #                            y = !!sym(var),
   #                            group = !!sym(rsk),
   #                            text = paste(
-  #                              "<b>",cd_full, "-", !!sym(rsk), "-", BrthYear, "</b>",
+  #                              "<b>",Name, "-", !!sym(rsk), "-", BrthYear, "</b>",
   #                              "<br> Total reported cases:",
   #                              ifelse(total_cases < 5,
   #                                     "< 5",
