@@ -46,11 +46,10 @@ ui <- function(id){
       ),
       div(
         class = "value",
-        introBox(data.step = 4, data.intro = intro$text[4],
-          # We need to ns() all ids 
+        # We need to ns() all ids 
         uiOutput(ns("metricsboxtitle2")),
         textOutput(ns("metricsbox2"))
-      ))
+      )
     ),
     div(
       class = "box box-primary metric metric-local metric-local-3",
@@ -279,7 +278,7 @@ init_server <- function(id, df1, df2, y1, y2, q, lim){
     # })
     
     output$metricsboxtitle1 <- renderUI({
-      tags$label("Nova Scotia total births")
+      tags$label("Total births")
     })
     
     # output$metricsboxtitle2 <- renderUI({
@@ -293,7 +292,7 @@ init_server <- function(id, df1, df2, y1, y2, q, lim){
     # })
     
     output$metricsboxtitle2 <- renderUI({
-      tags$label("Nova Scotia recorded congenital anomalies")
+      tags$label("Recorded congenital anomalies")
     })
     
     # output$metricsboxtitle3 <- renderUI({
@@ -306,7 +305,7 @@ init_server <- function(id, df1, df2, y1, y2, q, lim){
     # })
     
     output$metricsboxtitle3 <- renderUI({
-      tags$label("Nova Scotia prevalence (* cases per 1,000 total births)")
+      tags$label(HTML("Prevalence<br>(* cases per 1,000 total births)"))
     })
     
     # output$metricsboxtitle4 <- renderUI({

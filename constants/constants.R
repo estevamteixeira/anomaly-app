@@ -1,5 +1,6 @@
 # Use 'import' from the 'modules' package.
 # These listed imports are made available inside the module scope.
+import("arrow")
 import("cancensus")
 import("data.table")
 import("dplyr")
@@ -49,6 +50,7 @@ cd_anom <- readr::read_csv("./data/cd_anomaly.csv") |>
                                  CSDType),
                 SexNum = as.numeric(SexNum)) |>
   data.table::setDT()
+  # arrow::arrow_table()
 
 cd_birth <- readr::read_csv("./data/cd_birth.csv") |>
   ## filtering only NS counties
@@ -74,6 +76,7 @@ cd_birth <- readr::read_csv("./data/cd_birth.csv") |>
                   BTSEX %in% "A" ~ -1
                 )) |>
   data.table::setDT()
+  # arrow::arrow_table()
 
 ## Help and intro data
 # steps <- readr::read_csv("data/help.csv")
@@ -122,13 +125,13 @@ cd_shp <- data.table::setDT(cancensus::get_census(
 
 clus <- data.table::setDT(
   sf::read_sf(
-    "H:\\RCP\\RCP_Data\\TeixeiEC\\NS_Maps\\NSC_Clusters\\geo_export_0ed8251f-dbd5-4090-88ef-66c84d140e53.shp") %>%
+    "./data/NSC_clusters.shp") %>%
     sf::st_make_valid()
   )
 
 hn <- data.table::setDT(
   sf::read_sf(
-    "H:\\RCP\\RCP_Data\\TeixeiEC\\NS_Maps\\NSC_HealthNetwork\\geo_export_6985c353-2399-43a2-9514-d47b553341c2.shp") %>%
+    "./data/NSC_hn.shp") %>%
     dplyr::mutate(network = stringr::str_remove(network, " Comm H. Network")) %>% 
     sf::st_make_valid()
 )
@@ -159,32 +162,49 @@ metrics_list <- list(
   births = list(
     label = "Number of total births",
     value = paste(scales::comma(
-      nrow(unique(
-          cd_birth[tolower(dlv) %in% c("lvb", "stillbirth"),
-                   .(BIRTHID, BrthYear, CSDuid)])),
+      nrow(
+        cd_birth %>% 
+          filter(tolower(dlv) %in% c("lvb", "stillbirth")) %>% 
+          select(BIRTHID, BrthYear, CSDuid) %>% 
+          unique() %>% 
+          collect()
+          ),
       accuracy = 1), "total births")
   ),
   anomalies = list(
     label = "Number of registered congenital anomalies",
     value = paste(scales::comma(
-      nrow(unique(
-        cd_anom[, .(CaseID, BrthYear, CSDuid, Diags)])),
+      nrow(
+        cd_anom %>% 
+          select(CaseID, BrthYear, CSDuid, Diags) %>%
+          collect()
+        ),
       accuracy = 1), "records")
   ),
   rate = list(
     label = "Prevalence <br> (* cases per 1,000 live births)",
     value = scales::comma(
-      1000*nrow(unique(
-        cd_anom[, .(CaseID, BrthYear, CSDuid, Diags)]))/nrow(unique(
-          cd_birth[tolower(dlv) %in% c("lvb", "stillbirth"),
-                   .(BIRTHID, BrthYear, CSDuid)])),
+      1000*nrow(
+        cd_anom %>%
+          select(CaseID, BrthYear, CSDuid, Diags) %>%
+          collect()
+        )/nrow(
+          cd_birth %>% 
+            filter(tolower(dlv) %in% c("lvb", "stillbirth")) %>% 
+            select(BIRTHID, BrthYear, CSDuid) %>% 
+            unique() %>% 
+            collect()
+          ),
       accuracy = 0.1)
   ),
   infants = list(
     label = "Number of infants diagnosed",
     value = paste(scales::comma(
-      nrow(unique(
-        cd_anom[, .(CaseID, BrthYear, CSDuid)])),
+      nrow(
+        cd_anom %>% 
+          select(CaseID, BrthYear, CSDuid) %>%
+          collect()
+      ),
       accuracy = 1), "infants")
   )
 )
@@ -194,47 +214,47 @@ metrics_list <- list(
 
 icd10_opts <- list(
   "0",
-  c(as.character(unique(cd_anom[grepl("^Q000$|Q0000$|Q01|Q05", Diags)]$cat_tier3)),
-    sort(as.character(unique(cd_anom[grepl("^Q000$|Q0000$|Q01|Q05", Diags)]$cat_tier4)))),
-  c(as.character(unique(cd_anom[grepl("^Q02|Q03|Q041|Q042", Diags)]$cat_tier3)),
-    sort(as.character(unique(cd_anom[grepl("^Q02|Q03|Q041|Q042", Diags)]$cat_tier4)))),
-  c(as.character(unique(cd_anom[grepl("^Q110|Q11$|Q111|Q112|Q160|Q172|Q16$|Q17$|Q30", Diags)]$cat_tier3)),
-    sort(as.character(unique(cd_anom[grepl("^Q110|Q11$|Q111|Q112|Q160|Q172|Q16$|Q17$|Q30", Diags)]$cat_tier4)))),
-  c(as.character(unique(cd_anom[grepl("^Q200|Q20$|Q203|Q212|Q213|Q234|Q251", Diags)]$cat_tier3)),
-    sort(as.character(unique(cd_anom[grepl("^Q200|Q20$|Q203|Q212|Q213|Q234|Q251", Diags)]$cat_tier4)))),
-  c(as.character(unique(cd_anom[grepl("^Q35|Q36|Q37", Diags)]$cat_tier3)),
-    sort(as.character(unique(cd_anom[grepl("^Q35|Q36|Q37", Diags)]$cat_tier4)))),
-  c(as.character(unique(cd_anom[grepl("^Q39[0-4]|Q41|Q42[0-3]|Q431|Q442", Diags)]$cat_tier3)),
-    sort(as.character(unique(cd_anom[grepl("^Q39[0-4]|Q41|Q42[0-3]|Q431|Q442", Diags)]$cat_tier4)))),
-  c(as.character(unique(cd_anom[grepl("^Q53[1-2]|Q539|Q54|Q56|Q640", Diags)]$cat_tier3)),
-    sort(as.character(unique(cd_anom[grepl("^Q53[1-2]|Q539|Q54|Q56|Q640", Diags)]$cat_tier4)))),
-  c(as.character(unique(cd_anom[grepl("^Q60[0-2]|Q61[1-5]|Q61[8-9]|Q64[1-3]", Diags)]$cat_tier3)),
-    sort(as.character(unique(cd_anom[grepl("^Q60[0-2]|Q61[1-5]|Q61[8-9]|Q64[1-3]", Diags)]$cat_tier4)))),
-  c(as.character(unique(cd_anom[grepl("^Q65", Diags)]$cat_tier3)),
-    sort(as.character(unique(cd_anom[grepl("^Q65", Diags)]$cat_tier4)))),
-  c(as.character(unique(cd_anom[grepl("^Q71[4-9]|Q72[4-9]|Q738", Diags)]$cat_tier3)),
-    sort(as.character(unique(cd_anom[grepl("^Q71[4-9]|Q72[4-9]|Q738", Diags)]$cat_tier4)))),
-  c(as.character(unique(cd_anom[grepl("^Q79[2-3]", Diags)]$cat_tier3)),
-    sort(as.character(unique(cd_anom[grepl("^Q79[2-3]", Diags)]$cat_tier4)))),
-  c(as.character(unique(cd_anom[grepl("^Q909|Q90$|Q91[4-7]|Q91[0-3]|Q96", Diags)]$cat_tier3)),
-    sort(as.character(unique(cd_anom[grepl("^Q909|Q90$|Q91[4-7]|Q91[0-3]|Q96", Diags)]$cat_tier4))))
+  c(cd_anom %>% filter(grepl("^Q000$|Q0000$|Q01|Q05", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+    sort(cd_anom %>% filter(grepl("^Q000$|Q0000$|Q01|Q05", Diags)) %>% select(cat_tier4) %>% unique() %>% collect() %>% pull())),
+  c(cd_anom %>% filter(grepl("^Q02|Q03|Q041|Q042", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+    sort(cd_anom %>% filter(grepl("^Q02|Q03|Q041|Q042", Diags)) %>% select(cat_tier4) %>% unique() %>% collect() %>% pull())),
+  c(cd_anom %>% filter(grepl("^Q110|Q11$|Q111|Q112|Q160|Q172|Q16$|Q17$|Q30", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+    sort(cd_anom %>% filter(grepl("^Q110|Q11$|Q111|Q112|Q160|Q172|Q16$|Q17$|Q30", Diags)) %>% select(cat_tier4) %>% unique() %>% collect() %>% pull())),
+  c(cd_anom %>% filter(grepl("^Q200|Q20$|Q203|Q212|Q213|Q234|Q251", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+    sort(cd_anom %>% filter(grepl("^Q200|Q20$|Q203|Q212|Q213|Q234|Q251", Diags)) %>% select(cat_tier4) %>% unique() %>% collect() %>% pull())),
+  c(cd_anom %>% filter(grepl("^Q35|Q36|Q37", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+    sort(cd_anom %>% filter(grepl("^Q35|Q36|Q37", Diags)) %>% select(cat_tier4) %>% unique() %>% collect() %>% pull())),
+  c(cd_anom %>% filter(grepl("^Q39[0-4]|Q41|Q42[0-3]|Q431|Q442", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+    sort(cd_anom %>% filter(grepl("^Q39[0-4]|Q41|Q42[0-3]|Q431|Q442", Diags)) %>% select(cat_tier4) %>% unique() %>% collect() %>% pull())),
+  c(cd_anom %>% filter(grepl("^Q53[1-2]|Q539|Q54|Q56|Q640", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+    sort(cd_anom %>% filter(grepl("^Q53[1-2]|Q539|Q54|Q56|Q640", Diags)) %>% select(cat_tier4) %>% unique() %>% collect() %>% pull())),
+  c(cd_anom %>% filter(grepl("^Q60[0-2]|Q61[1-5]|Q61[8-9]|Q64[1-3]", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+    sort(cd_anom %>% filter(grepl("^Q60[0-2]|Q61[1-5]|Q61[8-9]|Q64[1-3]", Diags)) %>% select(cat_tier4) %>% unique() %>% collect() %>% pull())),
+  c(cd_anom %>% filter(grepl("^Q65", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+    sort(cd_anom %>% filter(grepl("^Q65", Diags)) %>% select(cat_tier4) %>% unique() %>% collect() %>% pull())),
+  c(cd_anom %>% filter(grepl("^Q71[4-9]|Q72[4-9]|Q738", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+    sort(cd_anom %>% filter(grepl("^Q71[4-9]|Q72[4-9]|Q738", Diags)) %>% select(cat_tier4) %>% unique() %>% collect() %>% pull())),
+  c(cd_anom %>% filter(grepl("^Q79[2-3]", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+    sort(cd_anom %>% filter(grepl("^Q79[2-3]", Diags)) %>% select(cat_tier4) %>% unique() %>% collect() %>% pull())),
+  c(cd_anom %>% filter(grepl("^Q909|Q90$|Q91[4-7]|Q91[0-3]|Q96", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+    sort(cd_anom %>% filter(grepl("^Q909|Q90$|Q91[4-7]|Q91[0-3]|Q96", Diags)) %>% select(cat_tier4) %>% unique() %>% collect() %>% pull()))
 )
 
 names(icd10_opts) <- c(
   "All conditions",
-  as.character(unique(cd_anom[grepl("^Q000$|Q0000$|Q01|Q05", Diags)]$cat_tier3)),
-  as.character(unique(cd_anom[grepl("^Q02|Q03|Q041|Q042", Diags)]$cat_tier3)),
-  as.character(unique(cd_anom[grepl("^Q110|Q11$|Q111|Q112|Q160|Q172|Q16$|Q17$|Q30", Diags)]$cat_tier3)),
-  as.character(unique(cd_anom[grepl("^Q200|Q20$|Q203|Q212|Q213|Q234|Q251", Diags)]$cat_tier3)),
-  as.character(unique(cd_anom[grepl("^Q35|Q36|Q37", Diags)]$cat_tier3)),
-  as.character(unique(cd_anom[grepl("^Q39[0-4]|Q41|Q42[0-3]|Q431|Q442", Diags)]$cat_tier3)),
-  as.character(unique(cd_anom[grepl("^Q53[1-2]|Q539|Q54|Q56|Q640", Diags)]$cat_tier3)),
-  as.character(unique(cd_anom[grepl("^Q60[0-2]|Q61[1-5]|Q61[8-9]|Q64[1-3]", Diags)]$cat_tier3)),
-  as.character(unique(cd_anom[grepl("^Q65", Diags)]$cat_tier3)),
-  as.character(unique(cd_anom[grepl("^Q71[4-9]|Q72[4-9]|Q738", Diags)]$cat_tier3)),
-  as.character(unique(cd_anom[grepl("^Q79[2-3]", Diags)]$cat_tier3)),
-  as.character(unique(cd_anom[grepl("^Q909|Q90$|Q91[4-7]|Q91[0-3]|Q96", Diags)]$cat_tier3))
-)
+  cd_anom %>% filter(grepl("^Q000$|Q0000$|Q01|Q05", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+  cd_anom %>% filter(grepl("^Q02|Q03|Q041|Q042", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+  cd_anom %>% filter(grepl("^Q110|Q11$|Q111|Q112|Q160|Q172|Q16$|Q17$|Q30", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+  cd_anom %>% filter(grepl("^Q200|Q20$|Q203|Q212|Q213|Q234|Q251", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+  cd_anom %>% filter(grepl("^Q35|Q36|Q37", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+  cd_anom %>% filter(grepl("^Q39[0-4]|Q41|Q42[0-3]|Q431|Q442", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+  cd_anom %>% filter(grepl("^Q53[1-2]|Q539|Q54|Q56|Q640", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+  cd_anom %>% filter(grepl("^Q60[0-2]|Q61[1-5]|Q61[8-9]|Q64[1-3]", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+  cd_anom %>% filter(grepl("^Q65", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+  cd_anom %>% filter(grepl("^Q71[4-9]|Q72[4-9]|Q738", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+  cd_anom %>% filter(grepl("^Q79[2-3]", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
+  cd_anom %>% filter(grepl("^Q909|Q90$|Q91[4-7]|Q91[0-3]|Q96", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull()
+  )
 
 risk_opts <- sort(c("SexNum","matage","smoker","bmipp","diab","Cannabis_Use","Alcohol_Use"#,"area"
                     ))

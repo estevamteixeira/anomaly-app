@@ -30,7 +30,6 @@ ui <- function(id){
   # prefix all ids with a string
   ns <- NS(id)
   
-  introBox(data.step = 9, data.intro = intro$text[9],
            box(
              title = "Data Sources",
              status = "primary",
@@ -42,7 +41,6 @@ ui <- function(id){
              # the ns() function we defined before
              plotly::plotlyOutput(ns("geoupset"))
            )
-  )
 }
 
 init_server <- function(id, df1, y1, y2, q, lim){

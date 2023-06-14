@@ -36,11 +36,12 @@ ui <- function(id){
   box(
     title = tags$span("Surveillance Over Time",
                       ## little 'i' btn
-                      bsButton("line_info",
-                               label = "",
-                               icon = icon("info"),
-                               style = "primary",
-                               size = "extra-small")),
+                      # bsButton("line_info",
+                      #          label = "",
+                      #          icon = icon("info"),
+                      #          style = "primary",
+                      #          size = "extra-small")
+                      ),
     status = "primary",
     collapsible = FALSE,
     solidHeader = FALSE,
@@ -82,8 +83,8 @@ ui <- function(id){
         "Pre-existing, pre-pregnancy, and in-pregnancy diabetes.</li>",
         "<li> <b>Fetal Sex</b><br> ",
         "Female, male.</li>",
-        "<li> <b>Location</b><br> ",
-        "Urban, rural.</li>",
+        # "<li> <b>Location</b><br> ",
+        # "Urban, rural.</li>",
         "<li> <b>Maternal Age</b><br> ",
         "Mother&#x27s age at birth.</li>",
         "<li> <b>Smoking Use</b><br> ",

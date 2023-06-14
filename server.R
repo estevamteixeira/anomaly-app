@@ -76,25 +76,59 @@ function(input, output, session){
     updateSelectInput(
     session,
     inputId = "init_time",
-    choices = c(sort(unique(consts$cd_anom$BrthYear[
-      consts$cd_anom$cat_tier4 %in% input$icd10]))),
-    selected = c(min(consts$cd_anom$BrthYear[
-      consts$cd_anom$cat_tier4 %in% input$icd10]))
+    choices = c(consts$cd_anom %>%
+      select(BrthYear, cat_tier4) %>% 
+      collect() %>% 
+      filter(cat_tier4 %in% input$icd10) %>%
+      pull(BrthYear) %>% 
+      unique() %>% 
+      sort()),
+    selected = c(min(consts$cd_anom %>%
+                       select(BrthYear, cat_tier4) %>% 
+                       collect() %>% 
+                       filter(cat_tier4 %in% input$icd10) %>%
+                       pull(BrthYear) %>% 
+                       unique() %>% 
+                       sort()))
     )} else if (!input$icd10 %in% 0 &
                 is.na(stringr::str_extract(input$icd10, pattern = "\\(.*\\)"))){
       updateSelectInput(
         session,
         inputId = "init_time",
-        choices = c(sort(unique(consts$cd_anom$BrthYear[
-          consts$cd_anom$cat_tier3 %in% input$icd10]))),
-        selected = c(min(consts$cd_anom$BrthYear[
-          consts$cd_anom$cat_tier3 %in% input$icd10]))
+        choices = c(consts$cd_anom %>%
+                      select(BrthYear, cat_tier3) %>% 
+                      collect() %>% 
+                      filter(cat_tier3 %in% input$icd10) %>%
+                      pull(BrthYear) %>% 
+                      unique() %>% 
+                      sort()
+                    ),
+        selected = c(min(consts$cd_anom %>%
+                           select(BrthYear, cat_tier3) %>% 
+                           collect() %>% 
+                           filter(cat_tier3 %in% input$icd10) %>%
+                           pull(BrthYear) %>% 
+                           unique() %>% 
+                           sort())
+                     )
       )} else {
       updateSelectInput(
         session,
         inputId = "init_time",
-        choices = c(sort(unique(consts$cd_anom$BrthYear))),
-        selected = c(min(consts$cd_anom$BrthYear))
+        choices = c(consts$cd_anom %>%
+                      select(BrthYear) %>% 
+                      collect() %>% 
+                      pull(BrthYear) %>% 
+                      unique() %>% 
+                      sort()
+                    ),
+        selected = c(min(consts$cd_anom %>%
+                           select(BrthYear) %>% 
+                           collect() %>% 
+                           pull(BrthYear) %>% 
+                           unique() %>% 
+                           sort())
+                     )
       )
   }
   })
@@ -108,31 +142,88 @@ function(input, output, session){
       updateSelectInput(
         session,
         inputId = "end_time",
-        choices = c(sort(unique(consts$cd_anom$BrthYear[
-          consts$cd_anom$cat_tier4 %in% input$icd10])))[
-            c(sort(unique(consts$cd_anom$BrthYear[
-              consts$cd_anom$cat_tier4 %in% input$icd10]))) >= input$init_time],
-        selected = c(max(consts$cd_anom$BrthYear[
-          consts$cd_anom$cat_tier4 %in% input$icd10]))
+        choices = c(consts$cd_anom %>%
+                      select(BrthYear, cat_tier4) %>% 
+                      collect() %>% 
+                      filter(cat_tier4 %in% input$icd10) %>%
+                      pull(BrthYear) %>% 
+                      unique() %>% 
+                      sort()
+                    )[
+                        c(consts$cd_anom %>%
+                            select(BrthYear, cat_tier4) %>% 
+                            collect() %>% 
+                            filter(cat_tier4 %in% input$icd10) %>%
+                            pull(BrthYear) %>% 
+                            unique() %>% 
+                            sort()
+                          ) >= input$init_time
+            ],
+        selected = c(max(consts$cd_anom %>%
+                           select(BrthYear, cat_tier4) %>% 
+                           collect() %>% 
+                           filter(cat_tier4 %in% input$icd10) %>%
+                           pull(BrthYear) %>% 
+                           unique() %>% 
+                           sort())
+                     )
       )
     } else if (!input$icd10 %in% 0 &
                is.na(stringr::str_extract(input$icd10, pattern = "\\(.*\\)"))){
       updateSelectInput(
         session,
         inputId = "end_time",
-        choices = c(sort(unique(consts$cd_anom$BrthYear[
-          consts$cd_anom$cat_tier3 %in% input$icd10])))[
-            c(sort(unique(consts$cd_anom$BrthYear[
-              consts$cd_anom$cat_tier3 %in% input$icd10]))) >= input$init_time],
-        selected = c(max(consts$cd_anom$BrthYear[
-          consts$cd_anom$cat_tier3 %in% input$icd10]))
+        choices = c(consts$cd_anom %>%
+                      select(BrthYear, cat_tier3) %>% 
+                      collect() %>% 
+                      filter(cat_tier3 %in% input$icd10) %>%
+                      pull(BrthYear) %>% 
+                      unique() %>% 
+                      sort()
+        )[
+          c(consts$cd_anom %>%
+              select(BrthYear, cat_tier3) %>% 
+              collect() %>% 
+              filter(cat_tier3 %in% input$icd10) %>%
+              pull(BrthYear) %>% 
+              unique() %>% 
+              sort()
+          ) >= input$init_time
+        ],
+        selected = c(max(consts$cd_anom %>%
+                           select(BrthYear, cat_tier3) %>% 
+                           collect() %>% 
+                           filter(cat_tier3 %in% input$icd10) %>%
+                           pull(BrthYear) %>% 
+                           unique() %>% 
+                           sort())
+        )
       )} else {
       updateSelectInput(
         session,
         inputId = "end_time",
-        choices = c(sort(unique(consts$cd_anom$BrthYear)))[
-            c(sort(unique(consts$cd_anom$BrthYear))) >= input$init_time],
-        selected = c(max(consts$cd_anom$BrthYear))
+        choices = c(consts$cd_anom %>%
+                      select(BrthYear) %>% 
+                      collect() %>% 
+                      pull(BrthYear) %>% 
+                      unique() %>% 
+                      sort()
+        )[
+          c(consts$cd_anom %>%
+              select(BrthYear) %>% 
+              collect() %>% 
+              pull(BrthYear) %>% 
+              unique() %>% 
+              sort()
+          ) >= input$init_time
+        ],
+        selected = c(max(consts$cd_anom %>%
+                           select(BrthYear) %>% 
+                           collect() %>% 
+                           pull(BrthYear) %>% 
+                           unique() %>% 
+                           sort())
+        )
       )
     }
     

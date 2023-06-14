@@ -29,7 +29,7 @@ ui <- function(id) {
   # "namespacing" function, that will 
   # prefix all ids with a string
   ns <- NS(id)
-  introBox(data.step = 5, data.intro = intro$text[5],
+  
   box(
     title = "Surveillance Table",
     status = "primary",
@@ -39,7 +39,8 @@ ui <- function(id) {
     # This looks the same as your usual piece of code, 
     # except that the id is wrapped into 
     # the ns() function we defined before
-    DT::DTOutput(ns("geotable"))
+    introBox(data.step = 2, data.intro = intro$text[5],
+             DT::DTOutput(ns("geotable"))
   ))
 }
 

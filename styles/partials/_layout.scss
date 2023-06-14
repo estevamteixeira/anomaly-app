@@ -95,7 +95,7 @@ body {
     border-color: white
 }
 
-#risk_info, #line_info {
+#risk_info, #line_info, #cond_info {
     background: $color-secondary;
     color: white;
     border-color: $color-terciary
@@ -106,3 +106,4 @@ body {
         font-weight: bold;
         color: #00706E !important;
       }
+      
