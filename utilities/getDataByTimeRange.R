@@ -1,43 +1,73 @@
 # Use 'import' from the 'modules' package.
 # These listed imports are made available inside the module scope.
+import("arrow")
 import("data.table")
 import("dplyr")
 import("lubridate")
 
-getSubsetByTimeRange <- function(df, y1, y2, q = NULL) {
-  # colsToSelect <- c("CDuid", "cd_full", "BrthYear", "cd.count_anom", 
-  #                   "total_lvb")
-  if (is.null(q) || q == "0") 
-    return(subset(
-      x = df,
-      subset = data.table::between(BrthYear, y1, y2) #includes boundaries
-      # select = colsToSelect
-    ))
-   
-  if (!q == "0" &&
-             is.na(stringr::str_extract(q, pattern = "\\(.*\\)")))
-    return(subset(
-      x = df,
-      subset = data.table::between(BrthYear, y1, y2) & cat_tier3 %in% q
-      # select = colsToSelect
-    ))
+# Filtering and select data ------
+
+getSubsetByTimeRange <- function(
+    df,
+    y1,
+    y2,
+    q = NULL, 
+    colsToSelect = c(
+      "CSDuid")
+    ) {
   
-  return(subset(
-      x = df,
-      subset = data.table::between(BrthYear, y1, y2) & cat_tier4 %in% q
-      # select = colsToSelect
-    ))
+  import("data.table")
+  import("dplyr")
   
+  if (is.null(q) || q == "0") {
+    return(
+      df %>%
+        dplyr::filter(
+          dplyr::between(BrthYear, y1, y2)
+          ) %>%
+        dplyr::select(
+          all_of(colsToSelect)
+          )
+    )
+  }
+  
+  if (!q == "0" && is.na(
+    stringr::str_extract(q, pattern = "\\(.*\\)")
+    )) {
+    return(
+      df %>%
+        dplyr::filter(
+          dplyr::between(BrthYear, y1, y2) & cat_tier3 %in% q) %>%
+        dplyr::select(
+          all_of(colsToSelect)
+          )
+      )
+  }
+  
+  return(
+    df %>%
+      dplyr::filter(
+        dplyr::between(BrthYear, y1, y2) & cat_tier4 %in% q) %>%
+      dplyr::select(
+        all_of(colsToSelect)
+        )
+    )
 }
+
 
 getGeoData <- function(df,
                        y1, y2,
-                       ColsToSelect,
+                       colsToSelect,
                        bygroup) {
  # eval(substitute({
-  unique(getSubsetByTimeRange(df, y1, y2, q = NULL)[,
-                                                    .SD,
-                                                    .SDcols = ColsToSelect
+  unique(
+    getSubsetByTimeRange(
+      df,
+      y1,
+      y2,
+      q = NULL)[,
+                .SD,
+                .SDcols = ColsToSelect
   ])[,
       `:=` (total_cases = .N), by = bygroup
     ]
@@ -52,15 +82,25 @@ sumAllNonNAValues <- function(v) {
   }
 }
 
-getGeoDataByCase <- function(df, y1, y2,
+getGeoDataByCase <- function(df,
+                             y1, y2,
                              q,
-                             ColsToSelect,
+                             colsToSelect,
                              bygroup){
+  import("data.table")
+  
   # eval(substitute({
-  unique(getSubsetByTimeRange(df, y1, y2, q)[,
-                                             .SD,
-                                             .SDcols = ColsToSelect
-  ])[,
+  unique(
+    setDT(
+      getSubsetByTimeRange(
+        df,
+        y1,
+        y2, 
+        q,
+        colsToSelect))[,
+                       .SD,
+                       .SDcols = colsToSelect
+                       ])[,
     `:=` (total_cases = .N),
     by = bygroup
   ]
@@ -69,7 +109,8 @@ getGeoDataByCase <- function(df, y1, y2,
 
 # Case -------
 
-buildGeoDataByCase <- function(df1, df2,
+buildGeoDataByCase <- function(df1,
+                               df2,
                                y1, y2,
                                q,
                                geo){
@@ -85,21 +126,25 @@ buildGeoDataByCase <- function(df1, df2,
             unique(
               getGeoDataByCase(
                 df1,
-                y1,
-                y2,
+                y1, y2,
                 q = NULL,
-                c("CaseID", "CSDuid", "CSDName", "CSDType", "BrthYear"),
-                c("CSDuid"))[, c("CSDuid", "CSDName", "CSDType", "total_cases")
+                colsToSelect = c(
+                  "CaseID", "CSDuid", "CSDName", "CSDType", "BrthYear"),
+                bygroup = c("CSDuid")
+                )[, c("CSDuid", "CSDName", "CSDType", "total_cases")
                 ]),
             unique(
               unique(
                 unique(
-                  getSubsetByTimeRange(
-                    df2,
-                    y1,
-                    y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
-                          c("BIRTHID", "CSDuid", "CSDName", "BrthYear", "dlv")
-                    ][, `:=` (count_dlv_geo_yr = .N),
+                  setDT(
+                    getSubsetByTimeRange(
+                      df2,
+                      y1,
+                      y2,
+                      colsToSelect = c(
+                        "BIRTHID", "CSDuid", "CSDName", "BrthYear", "dlv")
+                      ))[tolower(dlv) %in% c("lvb", "stillbirth")
+                      ][, `:=` (count_dlv_geo_yr = .N),
                       by = list(BrthYear, CSDuid, dlv)
                     ][,
                       c("CSDuid", "CSDName", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -137,21 +182,23 @@ buildGeoDataByCase <- function(df1, df2,
             unique(
               getGeoDataByCase(
                 df1,
-                y1,
-                y2,
+                y1, y2,
                 q = NULL,
-                c("CaseID", "CDuid", "CDName", "BrthYear"),
-                c("CDuid"))[, c("CDuid", "CDName", "total_cases")
+                colsToSelect = c("CaseID", "CDuid", "CDName", "BrthYear"),
+                bygroup = c("CDuid"))[, c("CDuid", "CDName", "total_cases")
                 ]),
             unique(
               unique(
                 unique(
-                  getSubsetByTimeRange(
-                    df2,
-                    y1,
-                    y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
-                          c("BIRTHID", "CDuid", "CDName", "BrthYear", "dlv")
-                    ][, `:=` (count_dlv_geo_yr = .N),
+                  setDT(
+                    getSubsetByTimeRange(
+                      df2,
+                      y1,
+                      y2,
+                      colsToSelect = c(
+                        "BIRTHID", "CDuid", "CDName", "BrthYear", "dlv")
+                      ))[tolower(dlv) %in% c("lvb", "stillbirth")
+                         ][, `:=` (count_dlv_geo_yr = .N),
                       by = list(BrthYear, CDuid, dlv)
                     ][,
                       c("CDuid", "CDName", "BrthYear", "dlv","count_dlv_geo_yr")
@@ -194,18 +241,20 @@ buildGeoDataByCase <- function(df1, df2,
                 y1,
                 y2,
                 q = NULL,
-                c("CaseID", "Cluster_Number", "ClusterName", "BrthYear"),
-                c("Cluster_Number"))[, c("Cluster_Number", "ClusterName", "total_cases")
+                colsToSelect = c("CaseID", "Cluster_Number", "ClusterName", "BrthYear"),
+                bygroup = c("Cluster_Number"))[, c("Cluster_Number", "ClusterName", "total_cases")
                 ]),
             unique(
               unique(
                 unique(
-                  getSubsetByTimeRange(
-                    df2,
-                    y1,
-                    y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
-                          c("BIRTHID", "Cluster_Number", "ClusterName", "BrthYear", "dlv")
-                    ][, `:=` (count_dlv_geo_yr = .N),
+                  setDT(
+                    getSubsetByTimeRange(
+                      df2,
+                      y1,
+                      y2,
+                      colsToSelect = c("BIRTHID", "Cluster_Number", "ClusterName", "BrthYear", "dlv")
+                      ))[tolower(dlv) %in% c("lvb", "stillbirth")
+                         ][, `:=` (count_dlv_geo_yr = .N),
                       by = list(BrthYear, Cluster_Number, dlv)
                     ][,
                       c("Cluster_Number", "ClusterName", "BrthYear", "dlv","count_dlv_geo_yr")
@@ -248,18 +297,20 @@ buildGeoDataByCase <- function(df1, df2,
                 y1,
                 y2,
                 q = NULL,
-                c("CaseID", "NetworkID", "NetworkName", "BrthYear"),
-                c("NetworkID"))[, c("NetworkID", "NetworkName", "total_cases")
+                colsToSelect = c("CaseID", "NetworkID", "NetworkName", "BrthYear"),
+                bygroup = c("NetworkID"))[, c("NetworkID", "NetworkName", "total_cases")
                 ]),
             unique(
               unique(
                 unique(
-                  getSubsetByTimeRange(
-                    df2,
-                    y1,
-                    y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
-                          c("BIRTHID", "NetworkID", "NetworkName", "BrthYear", "dlv")
-                    ][, `:=` (count_dlv_geo_yr = .N),
+                  setDT(
+                    getSubsetByTimeRange(
+                      df2,
+                      y1,
+                      y2,
+                      colsToSelect = c("BIRTHID", "NetworkID", "NetworkName", "BrthYear", "dlv")
+                      ))[tolower(dlv) %in% c("lvb", "stillbirth")
+                         ][, `:=` (count_dlv_geo_yr = .N),
                       by = list(BrthYear, NetworkID, dlv)
                     ][,
                       c("NetworkID", "NetworkName", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -300,17 +351,19 @@ buildGeoDataByCase <- function(df1, df2,
                 y1,
                 y2,
                 q = NULL,
-                c("CaseID", "CSDuid", "ZoneID", "ZnName", "BrthYear"),
-                c("ZoneID"))[, c("CSDuid", "ZoneID", "ZnName", "total_cases")
+                colsToSelect = c("CaseID", "CSDuid", "ZoneID", "ZnName", "BrthYear"),
+                bygroup = c("ZoneID"))[, c("CSDuid", "ZoneID", "ZnName", "total_cases")
                 ]),
             unique(
               unique(
+                setDT(
                   getSubsetByTimeRange(
                     df2,
                     y1,
-                    y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
-                        c("BIRTHID", "CSDuid", "ZoneID", "ZnName", "BrthYear", "dlv")
-                    ][, `:=` (count_dlv_geo_yr = .N),
+                    y2,
+                    colsToSelect = c("BIRTHID", "CSDuid", "ZoneID", "ZnName", "BrthYear", "dlv")
+                    ))[tolower(dlv) %in% c("lvb", "stillbirth")
+                       ][, `:=` (count_dlv_geo_yr = .N),
                       by = list(BrthYear, CSDuid, ZoneID, dlv)
                     ][,
                       c("CSDuid", "ZoneID", "ZnName", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -346,17 +399,19 @@ buildGeoDataByCase <- function(df1, df2,
                 y1,
                 y2,
                 q = NULL,
-                c("CaseID", "CSDuid", "area", "BrthYear"),
-                c("area"))[, c("CSDuid", "area", "total_cases")
+                colsToSelect = c("CaseID", "CSDuid", "area", "BrthYear"),
+                bygroup = c("area"))[, c("CSDuid", "area", "total_cases")
                 ]),
             unique(
               unique(
-                  getSubsetByTimeRange(
+                getSubsetByTimeRange(
+                  setDT(
                     df2,
                     y1,
-                    y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
-                        c("BIRTHID", "CSDuid", "area", "BrthYear", "dlv")
-                    ][, `:=` (count_dlv_geo_yr = .N),
+                    y2,
+                    colsToSelect = c("BIRTHID", "CSDuid", "area", "BrthYear", "dlv")
+                    ))[tolower(dlv) %in% c("lvb", "stillbirth")
+                       ][, `:=` (count_dlv_geo_yr = .N),
                       by = list(BrthYear, CSDuid, area, dlv)
                     ][,
                       c("CSDuid", "area", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -381,8 +436,7 @@ buildGeoDataByCase <- function(df1, df2,
             ]
       )
     
-  } else if (!q == "0" &&
-             all(is.na(stringr::str_extract(q, pattern = "\\(.*\\)")))){
+  } else if (!q == "0" && all(is.na(stringr::str_extract(q, pattern = "\\(.*\\)")))){
     if (tolower(tolower(geo) %in% "csd"))
       return(
         unique(
@@ -403,12 +457,14 @@ buildGeoDataByCase <- function(df1, df2,
                    ]),
             unique(
               unique(
+                setDT(
                 getSubsetByTimeRange(
                   df2,
                   y1,
-                  y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
-                        c("BIRTHID", "CSDuid", "CSDName", "BrthYear", "dlv")
-                  ][, `:=` (count_dlv_geo_yr = .N),
+                  y2,
+                  colsToSelect = c("BIRTHID", "CSDuid", "CSDName", "BrthYear", "dlv")
+                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
+                     ][, `:=` (count_dlv_geo_yr = .N),
                     by = list(BrthYear, CSDuid, dlv)
                   ][,
                     c("CSDuid", "CSDName", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -457,12 +513,14 @@ buildGeoDataByCase <- function(df1, df2,
               ]),
           unique(
             unique(
-              getSubsetByTimeRange(
-                df2,
-                y1,
-                y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
-                      c("BIRTHID", "CDuid", "CDName", "BrthYear", "dlv")
-                ][, `:=` (count_dlv_geo_yr = .N),
+              setDT(
+                getSubsetByTimeRange(
+                  df2,
+                  y1,
+                  y2,
+                  colsToSelect = c("BIRTHID", "CDuid", "CDName", "BrthYear", "dlv")
+                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
+                     ][, `:=` (count_dlv_geo_yr = .N),
                   by = list(BrthYear, CDuid, dlv)
                 ][,
                   c("CDuid", "CDName", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -511,12 +569,14 @@ buildGeoDataByCase <- function(df1, df2,
               ]),
           unique(
             unique(
-              getSubsetByTimeRange(
-                df2,
-                y1,
-                y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
-                      c("BIRTHID", "Cluster_Number", "ClusterName", "BrthYear", "dlv")
-                ][, `:=` (count_dlv_geo_yr = .N),
+              setDT(
+                getSubsetByTimeRange(
+                  df2,
+                  y1,
+                  y2,
+                  colsToSelect = c("BIRTHID", "Cluster_Number", "ClusterName", "BrthYear", "dlv")
+                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
+                     ][, `:=` (count_dlv_geo_yr = .N),
                   by = list(BrthYear, Cluster_Number, dlv)
                 ][,
                   c("Cluster_Number", "ClusterName", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -565,12 +625,14 @@ buildGeoDataByCase <- function(df1, df2,
               ]),
           unique(
             unique(
-              getSubsetByTimeRange(
-                df2,
-                y1,
-                y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
-                      c("BIRTHID", "NetworkID", "NetworkName", "BrthYear", "dlv")
-                ][, `:=` (count_dlv_geo_yr = .N),
+              setDT(
+                getSubsetByTimeRange(
+                  df2,
+                  y1,
+                  y2,
+                  colsToSelect = c("BIRTHID", "NetworkID", "NetworkName", "BrthYear", "dlv")
+                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
+                     ][, `:=` (count_dlv_geo_yr = .N),
                   by = list(BrthYear, NetworkID, dlv)
                 ][,
                   c("NetworkID", "NetworkName", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -618,12 +680,14 @@ buildGeoDataByCase <- function(df1, df2,
                      by = list(ZoneID, cat_tier3)
                   ]),
             unique(
-              getSubsetByTimeRange(
+              setDT(
+                getSubsetByTimeRange(
                   df2,
                   y1,
-                  y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
-                      c("BIRTHID", "CSDuid","ZoneID", "ZnName", "BrthYear", "dlv")
-                  ][, `:=` (count_dlv_geo_yr = .N),
+                  y2,
+                  colsToSelect = c("BIRTHID", "CSDuid","ZoneID", "ZnName", "BrthYear", "dlv")
+                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
+                     ][, `:=` (count_dlv_geo_yr = .N),
                     by = list(BrthYear, CSDuid, ZoneID, dlv)
                   ][,
                     c("CSDuid", "ZoneID", "ZnName", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -666,12 +730,14 @@ buildGeoDataByCase <- function(df1, df2,
                      by = list(area, cat_tier3)
                   ]),
             unique(
-              getSubsetByTimeRange(
-                df2,
-                y1,
-                y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
-                    c("BIRTHID", "CSDuid", "area", "BrthYear", "dlv")
-                ][, `:=` (count_dlv_geo_yr = .N),
+              setDT(
+                getSubsetByTimeRange(
+                  df2,
+                  y1,
+                  y2,
+                  colsToSelect = c("BIRTHID", "CSDuid", "area", "BrthYear", "dlv")
+                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
+                     ][, `:=` (count_dlv_geo_yr = .N),
                   by = list(BrthYear, CSDuid, area, dlv)
                 ][,
                   c("CSDuid", "area", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -715,12 +781,14 @@ buildGeoDataByCase <- function(df1, df2,
                 ]),
             unique(
               unique(
-                getSubsetByTimeRange(
-                  df2,
-                  y1,
-                  y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
-                        c("BIRTHID", "CSDuid", "CSDName", "BrthYear", "dlv")
-                  ][, `:=` (count_dlv_geo_yr = .N),
+                setDT(
+                  getSubsetByTimeRange(
+                    df2,
+                    y1,
+                    y2,
+                    colsToSelect = c("BIRTHID", "CSDuid", "CSDName", "BrthYear", "dlv")
+                    ))[tolower(dlv) %in% c("lvb", "stillbirth")
+                       ][, `:=` (count_dlv_geo_yr = .N),
                     by = list(BrthYear, CSDuid, dlv)
                   ][,
                     c("CSDuid", "CSDName", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -769,12 +837,14 @@ buildGeoDataByCase <- function(df1, df2,
               ]),
           unique(
             unique(
-              getSubsetByTimeRange(
-                df2,
-                y1,
-                y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
-                      c("BIRTHID", "CDuid", "CDName", "BrthYear", "dlv")
-                ][, `:=` (count_dlv_geo_yr = .N),
+              setDT(
+                getSubsetByTimeRange(
+                  df2,
+                  y1,
+                  y2,
+                  colsToSelect = c("BIRTHID", "CDuid", "CDName", "BrthYear", "dlv")
+                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
+                     ][, `:=` (count_dlv_geo_yr = .N),
                   by = list(BrthYear, CDuid, dlv)
                 ][,
                   c("CDuid", "CDName", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -823,12 +893,14 @@ buildGeoDataByCase <- function(df1, df2,
               ]),
           unique(
             unique(
-              getSubsetByTimeRange(
-                df2,
-                y1,
-                y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
-                      c("BIRTHID", "Cluster_Number", "ClusterName", "BrthYear", "dlv")
-                ][, `:=` (count_dlv_geo_yr = .N),
+              setDT(
+                getSubsetByTimeRange(
+                  df2,
+                  y1,
+                  y2,
+                  colsToSelect = c("BIRTHID", "Cluster_Number", "ClusterName", "BrthYear", "dlv")
+                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
+                     ][, `:=` (count_dlv_geo_yr = .N),
                   by = list(BrthYear, Cluster_Number, dlv)
                 ][,
                   c("Cluster_Number", "ClusterName", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -877,12 +949,14 @@ buildGeoDataByCase <- function(df1, df2,
               ]),
           unique(
             unique(
-              getSubsetByTimeRange(
-                df2,
-                y1,
-                y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
-                      c("BIRTHID", "NetworkID", "NetworkName", "BrthYear", "dlv")
-                ][, `:=` (count_dlv_geo_yr = .N),
+              setDT(
+                getSubsetByTimeRange(
+                  df2,
+                  y1,
+                  y2,
+                  colsToSelect = c("BIRTHID", "NetworkID", "NetworkName", "BrthYear", "dlv")
+                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
+                     ][, `:=` (count_dlv_geo_yr = .N),
                   by = list(BrthYear, NetworkID, dlv)
                 ][,
                   c("NetworkID", "NetworkName", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -930,12 +1004,14 @@ buildGeoDataByCase <- function(df1, df2,
                      by = list(ZoneID, cat_tier4)
                   ]),
             unique(
-              getSubsetByTimeRange(
+              setDT(
+                getSubsetByTimeRange(
                   df2,
                   y1,
-                  y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
-                      c("BIRTHID", "CSDuid", "ZoneID", "ZnName", "BrthYear", "dlv")
-                  ][, `:=` (count_dlv_geo_yr = .N),
+                  y2,
+                  colsToSelect = c("BIRTHID", "CSDuid", "ZoneID", "ZnName", "BrthYear", "dlv")
+                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
+                     ][, `:=` (count_dlv_geo_yr = .N),
                     by = list(BrthYear, ZoneID, dlv)
                   ][,
                     c("CSDuid", "ZoneID", "ZnName", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -978,12 +1054,14 @@ buildGeoDataByCase <- function(df1, df2,
                      by = list(area, cat_tier4)
                   ]),
             unique(
+              setDT(
                 getSubsetByTimeRange(
                   df2,
                   y1,
-                  y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
-                      c("BIRTHID", "CSDuid", "area", "BrthYear", "dlv")
-                  ][, `:=` (count_dlv_geo_yr = .N),
+                  y2,
+                  colsToSelect = c("BIRTHID", "CSDuid", "area", "BrthYear", "dlv")
+                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
+                     ][, `:=` (count_dlv_geo_yr = .N),
                     by = list(BrthYear, area, dlv)
                   ][,
                     c("CSDuid", "area", "BrthYear", "dlv", "count_dlv_geo_yr")

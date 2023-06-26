@@ -234,19 +234,23 @@ function(input, output, session){
   condition <- reactive({ input$icd10})
   geography <- reactive({ input$geo})
   
-  session$userData$table_view <- table_view$init_server(
-    "table_advanced_view",
-    df1 = consts$cd_anom,
-    df2 = consts$cd_birth,
-    y1 = initial_year,
-    y2 = final_year,
-    q = condition,
-    lim = geography
-  )
+  # Table -----
+  
+  # session$userData$table_view <- table_view$init_server(
+  #   "table_advanced_view",
+  #   df1 = consts$cd_anom,
+  #   df2 = consts$cd_birth,
+  #   y1 = initial_year,
+  #   y2 = final_year,
+  #   q = condition,
+  #   lim = geography
+  # )
   
   # global_metrics_view$init_server("global_metrics_advanced_view")
   
   # local_metrics_view$init_server("local_metrics_advanced_view")
+  
+  # Local metrics ------
   
   session$userData$local_metrics_view <- local_metrics_view$init_server(
     "local_metrics_advanced_view",
@@ -258,33 +262,39 @@ function(input, output, session){
     lim = geography
   )
   
-  session$userData$map_view <- map_view$init_server(
-    "map_advanced_view",
-    df1 = consts$cd_anom,
-    df2 = consts$cd_birth,
-    y1 = initial_year,
-    y2 = final_year,
-    q = condition,
-    lim = geography
-  )
+  # NS Map -----
   
-    session$userData$line_view <- line_view$init_server(
-    "line_advanced_view",
-    df1 = consts$cd_anom,
-    df2 = consts$cd_birth,
-    y1 = initial_year,
-    y2 = final_year,
-    q = condition,
-    lim = geography
-  )
+  # session$userData$map_view <- map_view$init_server(
+  #   "map_advanced_view",
+  #   df1 = consts$cd_anom,
+  #   df2 = consts$cd_birth,
+  #   y1 = initial_year,
+  #   y2 = final_year,
+  #   q = condition,
+  #   lim = geography
+  # )
+  
+  # Lineplot ----
+  
+  #   session$userData$line_view <- line_view$init_server(
+  #   "line_advanced_view",
+  #   df1 = consts$cd_anom,
+  #   df2 = consts$cd_birth,
+  #   y1 = initial_year,
+  #   y2 = final_year,
+  #   q = condition,
+  #   lim = geography
+  # )
     
-    session$userData$upset_view <- upset_view$init_server(
-      "bar_advanced_view",
-      df1 = consts$cd_anom,
-      y1 = initial_year,
-      y2 = final_year,
-      q = condition,
-      lim = geography
-    )
+  # Barplot ----
+  
+    # session$userData$upset_view <- upset_view$init_server(
+    #   "bar_advanced_view",
+    #   df1 = consts$cd_anom,
+    #   y1 = initial_year,
+    #   y2 = final_year,
+    #   q = condition,
+    #   lim = geography
+    # )
   
 }

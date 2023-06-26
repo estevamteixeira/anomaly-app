@@ -125,16 +125,16 @@ dashboardPage(
         class = "table-grid-wrapper",
         table_view$ui("table_advanced_view")
       ),
-      div(
-        class = "map-grid-wrapper",
-        map_view$ui("map_advanced_view")
-      ),
-      div(class = "line-grid-wrapper",
-          line_view$ui("line_advanced_view")
-      ),
-      div(class = "barchart-grid-wrapper",
-          upset_view$ui("bar_advanced_view")
-      ),
+      # div(
+      #   class = "map-grid-wrapper",
+      #   map_view$ui("map_advanced_view")
+      # ),
+      # div(class = "line-grid-wrapper",
+      #     line_view$ui("line_advanced_view")
+      # ),
+      # div(class = "barchart-grid-wrapper",
+      #     upset_view$ui("bar_advanced_view")
+      # ),
       local_metrics_view$ui("local_metrics_advanced_view")
       )
     ),

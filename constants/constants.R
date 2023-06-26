@@ -49,8 +49,8 @@ cd_anom <- readr::read_csv("./data/cd_anomaly.csv") |>
                                  "Rural municipality",
                                  CSDType),
                 SexNum = as.numeric(SexNum)) |>
-  data.table::setDT()
-  # arrow::arrow_table()
+  # data.table::setDT()
+  arrow::arrow_table()
 
 cd_birth <- readr::read_csv("./data/cd_birth.csv") |>
   ## filtering only NS counties
@@ -75,8 +75,8 @@ cd_birth <- readr::read_csv("./data/cd_birth.csv") |>
                   BTSEX %in% "F" ~ 2,
                   BTSEX %in% "A" ~ -1
                 )) |>
-  data.table::setDT()
-  # arrow::arrow_table()
+  # data.table::setDT()
+  arrow::arrow_table()
 
 ## Help and intro data
 # steps <- readr::read_csv("data/help.csv")
