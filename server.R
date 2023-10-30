@@ -8,7 +8,6 @@ import("shiny")
 consts <- use("constants/constants.R")
 
 
-
 function(input, output, session){
   
   ## Show intro modal
@@ -16,14 +15,14 @@ function(input, output, session){
   observeEvent("", {
     showModal(
       modalDialog(
-      includeHTML("intro_text.html"),
-      easyClose = TRUE,
-      footer = tagList(
-        actionButton(inputId = "intro",
-                     label = "Introduction Tour",
-                     icon = icon("info-circle"))
-      )
-    ))
+        includeHTML("intro_text.html"),
+        easyClose = TRUE,
+        footer = tagList(
+          actionButton(inputId = "intro",
+                       label = "Introduction Tour",
+                       icon = icon("info-circle"))
+        )
+      ))
   })
   
   ## Remove modal when clicking the button
@@ -37,12 +36,12 @@ function(input, output, session){
     ## Remove modal when clicking the button
     removeModal()
     ## Start intro tour
-               introjs(session,
-                       options = list("nextLabel" = "Continue",
-                                      "prevLabel" = "Previous",
-                                      "doneLabel" = "Alright. Let's go",
-                                      "skipLabel" = "Skip",
-                                      showStepNumbers = TRUE))
+    introjs(session,
+            options = list("nextLabel" = "Continue",
+                           "prevLabel" = "Previous",
+                           "doneLabel" = "Alright. Let's go",
+                           "skipLabel" = "Skip",
+                           showStepNumbers = TRUE))
   })
   
   # show intro tour when pressing the introduction button
@@ -73,64 +72,30 @@ function(input, output, session){
     
     if (!input$icd10 %in% 0 &
         !is.na(stringr::str_extract(input$icd10, pattern = "\\(.*\\)"))){
-    updateSelectInput(
-    session,
-    inputId = "init_time",
-    choices = c(consts$cd_anom %>%
-      select(BrthYear, cat_tier4) %>% 
-      collect() %>% 
-      filter(cat_tier4 %in% input$icd10) %>%
-      pull(BrthYear) %>% 
-      unique() %>% 
-      sort()),
-    selected = c(min(consts$cd_anom %>%
-                       select(BrthYear, cat_tier4) %>% 
-                       collect() %>% 
-                       filter(cat_tier4 %in% input$icd10) %>%
-                       pull(BrthYear) %>% 
-                       unique() %>% 
-                       sort()))
-    )} else if (!input$icd10 %in% 0 &
-                is.na(stringr::str_extract(input$icd10, pattern = "\\(.*\\)"))){
       updateSelectInput(
         session,
         inputId = "init_time",
-        choices = c(consts$cd_anom %>%
-                      select(BrthYear, cat_tier3) %>% 
-                      collect() %>% 
-                      filter(cat_tier3 %in% input$icd10) %>%
-                      pull(BrthYear) %>% 
-                      unique() %>% 
-                      sort()
-                    ),
-        selected = c(min(consts$cd_anom %>%
-                           select(BrthYear, cat_tier3) %>% 
-                           collect() %>% 
-                           filter(cat_tier3 %in% input$icd10) %>%
-                           pull(BrthYear) %>% 
-                           unique() %>% 
-                           sort())
-                     )
-      )} else {
-      updateSelectInput(
-        session,
-        inputId = "init_time",
-        choices = c(consts$cd_anom %>%
-                      select(BrthYear) %>% 
-                      collect() %>% 
-                      pull(BrthYear) %>% 
-                      unique() %>% 
-                      sort()
-                    ),
-        selected = c(min(consts$cd_anom %>%
-                           select(BrthYear) %>% 
-                           collect() %>% 
-                           pull(BrthYear) %>% 
-                           unique() %>% 
-                           sort())
-                     )
-      )
-  }
+        choices = c(sort(unique(consts$cd_anom$BrthYear[
+          consts$cd_anom$cat_tier4 %in% input$icd10]))),
+        selected = c(min(consts$cd_anom$BrthYear[
+          consts$cd_anom$cat_tier4 %in% input$icd10]))
+      )} else if (!input$icd10 %in% 0 &
+                  is.na(stringr::str_extract(input$icd10, pattern = "\\(.*\\)"))){
+        updateSelectInput(
+          session,
+          inputId = "init_time",
+          choices = c(sort(unique(consts$cd_anom$BrthYear[
+            consts$cd_anom$cat_tier3 %in% input$icd10]))),
+          selected = c(min(consts$cd_anom$BrthYear[
+            consts$cd_anom$cat_tier3 %in% input$icd10]))
+        )} else {
+          updateSelectInput(
+            session,
+            inputId = "init_time",
+            choices = c(sort(unique(consts$cd_anom$BrthYear))),
+            selected = c(min(consts$cd_anom$BrthYear))
+          )
+        }
   })
   
   ## Make the final year option greater than or equal the
@@ -142,90 +107,33 @@ function(input, output, session){
       updateSelectInput(
         session,
         inputId = "end_time",
-        choices = c(consts$cd_anom %>%
-                      select(BrthYear, cat_tier4) %>% 
-                      collect() %>% 
-                      filter(cat_tier4 %in% input$icd10) %>%
-                      pull(BrthYear) %>% 
-                      unique() %>% 
-                      sort()
-                    )[
-                        c(consts$cd_anom %>%
-                            select(BrthYear, cat_tier4) %>% 
-                            collect() %>% 
-                            filter(cat_tier4 %in% input$icd10) %>%
-                            pull(BrthYear) %>% 
-                            unique() %>% 
-                            sort()
-                          ) >= input$init_time
-            ],
-        selected = c(max(consts$cd_anom %>%
-                           select(BrthYear, cat_tier4) %>% 
-                           collect() %>% 
-                           filter(cat_tier4 %in% input$icd10) %>%
-                           pull(BrthYear) %>% 
-                           unique() %>% 
-                           sort())
-                     )
+        choices = c(sort(unique(consts$cd_anom$BrthYear[
+          consts$cd_anom$cat_tier4 %in% input$icd10])))[
+            c(sort(unique(consts$cd_anom$BrthYear[
+              consts$cd_anom$cat_tier4 %in% input$icd10]))) >= input$init_time],
+        selected = c(max(consts$cd_anom$BrthYear[
+          consts$cd_anom$cat_tier4 %in% input$icd10]))
       )
     } else if (!input$icd10 %in% 0 &
                is.na(stringr::str_extract(input$icd10, pattern = "\\(.*\\)"))){
       updateSelectInput(
         session,
         inputId = "end_time",
-        choices = c(consts$cd_anom %>%
-                      select(BrthYear, cat_tier3) %>% 
-                      collect() %>% 
-                      filter(cat_tier3 %in% input$icd10) %>%
-                      pull(BrthYear) %>% 
-                      unique() %>% 
-                      sort()
-        )[
-          c(consts$cd_anom %>%
-              select(BrthYear, cat_tier3) %>% 
-              collect() %>% 
-              filter(cat_tier3 %in% input$icd10) %>%
-              pull(BrthYear) %>% 
-              unique() %>% 
-              sort()
-          ) >= input$init_time
-        ],
-        selected = c(max(consts$cd_anom %>%
-                           select(BrthYear, cat_tier3) %>% 
-                           collect() %>% 
-                           filter(cat_tier3 %in% input$icd10) %>%
-                           pull(BrthYear) %>% 
-                           unique() %>% 
-                           sort())
-        )
+        choices = c(sort(unique(consts$cd_anom$BrthYear[
+          consts$cd_anom$cat_tier3 %in% input$icd10])))[
+            c(sort(unique(consts$cd_anom$BrthYear[
+              consts$cd_anom$cat_tier3 %in% input$icd10]))) >= input$init_time],
+        selected = c(max(consts$cd_anom$BrthYear[
+          consts$cd_anom$cat_tier3 %in% input$icd10]))
       )} else {
-      updateSelectInput(
-        session,
-        inputId = "end_time",
-        choices = c(consts$cd_anom %>%
-                      select(BrthYear) %>% 
-                      collect() %>% 
-                      pull(BrthYear) %>% 
-                      unique() %>% 
-                      sort()
-        )[
-          c(consts$cd_anom %>%
-              select(BrthYear) %>% 
-              collect() %>% 
-              pull(BrthYear) %>% 
-              unique() %>% 
-              sort()
-          ) >= input$init_time
-        ],
-        selected = c(max(consts$cd_anom %>%
-                           select(BrthYear) %>% 
-                           collect() %>% 
-                           pull(BrthYear) %>% 
-                           unique() %>% 
-                           sort())
+        updateSelectInput(
+          session,
+          inputId = "end_time",
+          choices = c(sort(unique(consts$cd_anom$BrthYear)))[
+            c(sort(unique(consts$cd_anom$BrthYear))) >= input$init_time],
+          selected = c(max(consts$cd_anom$BrthYear))
         )
-      )
-    }
+      }
     
   })
   
@@ -234,23 +142,19 @@ function(input, output, session){
   condition <- reactive({ input$icd10})
   geography <- reactive({ input$geo})
   
-  # Table -----
-  
-  # session$userData$table_view <- table_view$init_server(
-  #   "table_advanced_view",
-  #   df1 = consts$cd_anom,
-  #   df2 = consts$cd_birth,
-  #   y1 = initial_year,
-  #   y2 = final_year,
-  #   q = condition,
-  #   lim = geography
-  # )
+  session$userData$table_view <- table_view$init_server(
+    "table_advanced_view",
+    df1 = consts$cd_anom,
+    df2 = consts$cd_birth,
+    y1 = initial_year,
+    y2 = final_year,
+    q = condition,
+    lim = geography
+  )
   
   # global_metrics_view$init_server("global_metrics_advanced_view")
   
   # local_metrics_view$init_server("local_metrics_advanced_view")
-  
-  # Local metrics ------
   
   session$userData$local_metrics_view <- local_metrics_view$init_server(
     "local_metrics_advanced_view",
@@ -262,39 +166,33 @@ function(input, output, session){
     lim = geography
   )
   
-  # NS Map -----
+  session$userData$map_view <- map_view$init_server(
+    "map_advanced_view",
+    df1 = consts$cd_anom,
+    df2 = consts$cd_birth,
+    y1 = initial_year,
+    y2 = final_year,
+    q = condition,
+    lim = geography
+  )
   
-  # session$userData$map_view <- map_view$init_server(
-  #   "map_advanced_view",
-  #   df1 = consts$cd_anom,
-  #   df2 = consts$cd_birth,
-  #   y1 = initial_year,
-  #   y2 = final_year,
-  #   q = condition,
-  #   lim = geography
-  # )
+  session$userData$line_view <- line_view$init_server(
+    "line_advanced_view",
+    df1 = consts$cd_anom,
+    df2 = consts$cd_birth,
+    y1 = initial_year,
+    y2 = final_year,
+    q = condition,
+    lim = geography
+  )
   
-  # Lineplot ----
-  
-  #   session$userData$line_view <- line_view$init_server(
-  #   "line_advanced_view",
-  #   df1 = consts$cd_anom,
-  #   df2 = consts$cd_birth,
-  #   y1 = initial_year,
-  #   y2 = final_year,
-  #   q = condition,
-  #   lim = geography
-  # )
-    
-  # Barplot ----
-  
-    # session$userData$upset_view <- upset_view$init_server(
-    #   "bar_advanced_view",
-    #   df1 = consts$cd_anom,
-    #   y1 = initial_year,
-    #   y2 = final_year,
-    #   q = condition,
-    #   lim = geography
-    # )
+  session$userData$upset_view <- upset_view$init_server(
+    "bar_advanced_view",
+    df1 = consts$cd_anom,
+    y1 = initial_year,
+    y2 = final_year,
+    q = condition,
+    lim = geography
+  )
   
 }

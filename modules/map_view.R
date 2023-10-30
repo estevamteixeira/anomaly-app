@@ -4,8 +4,10 @@ import("data.table")
 import("geojsonsf")
 import("leaflet")
 # import("leaflet.extras")
+import("mapview")
 import("rintrojs")
 import("shiny")
+import("shinyBS")
 import("shinydashboard")
 import("shinyjs")
 import("utils")
@@ -35,18 +37,25 @@ ui <- function(id){
   
   # introBox(data.step = 6, data.intro = intro$text[6],
   box(
-    title = "Surveillance Map",
+    title = tags$span("Surveillance Map",
+                      ## little 'i' btn
+                      bsButton("map_info",
+                               label = "",
+                               icon = icon("info"),
+                               style = "primary",
+                               size = "extra-small")
+    ),
     # title = HTML("Surveillance Map <br>
     #              <span style='color: #777777;
     #              font-size: 14px' >
-    #              Prevalence (*cases per 1,000 total births) </span>"),
+    #              Geographies were determined based on mothers' postal codes at the time of admission for delivery. </span>"),
     status = "primary",
     # tags$caption(
     #   shiny::HTML(
-    #     "<span 
+    #     "<span
     #     style='color: #777777'>
-    #     Prevalence (*cases per 1,000 total births)
-    #     </span>" 
+    #     Geographies were determined based on mothers' postal codes at the time of admission for delivery.
+    #     </span>"
     #   )),
     collapsible = FALSE,
     solidHeader = FALSE,
@@ -56,13 +65,25 @@ ui <- function(id){
     # except that the id is wrapped into 
     # the ns() function we defined before
     leaflet::leafletOutput(ns("geomap")),
+    bsPopover(
+      id = "map_info",
+      title = "More Information",
+      content = paste0(
+        "Geographies were determined based on <b>mother&#x27s</b> ",
+        "postal codes at the time of admission for delivery."
+      ),
+      placement = "right",
+      trigger = "hover",
+      options = list(container = "body")
+    ),
     ## conditionally show or hide UI elements based on a JavaScript expression
     ## checks if the geo_selected_data input exists and is not undefined
     ## If both conditions are true, the UI elements will be displayed
     conditionalPanel("typeof input.geo_selected_data() !== 'undefined' &&
                      input.geo_selected_data.length() > 0)",
                      uiOutput(ns("controls"))
-                     ))
+                     ),
+    downloadButton(ns("dlmap")))
   # )
 }
 

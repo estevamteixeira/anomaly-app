@@ -49,8 +49,8 @@ cd_anom <- readr::read_csv("./data/cd_anomaly.csv") |>
                                  "Rural municipality",
                                  CSDType),
                 SexNum = as.numeric(SexNum)) |>
-  # data.table::setDT()
-  arrow::arrow_table()
+  data.table::setDT()
+# arrow::arrow_table()
 
 cd_birth <- readr::read_csv("./data/cd_birth.csv") |>
   ## filtering only NS counties
@@ -65,8 +65,8 @@ cd_birth <- readr::read_csv("./data/cd_birth.csv") |>
                                 "1208003",
                                 CSDuid),
                 CSDName = ifelse(CSDuid %in% c("1208003"),
-                                "West Hants",
-                                CSDName),
+                                 "West Hants",
+                                 CSDName),
                 CSDType = ifelse(CSDuid %in% c("1208003"),
                                  "Rural municipality",
                                  CSDType),
@@ -75,8 +75,8 @@ cd_birth <- readr::read_csv("./data/cd_birth.csv") |>
                   BTSEX %in% "F" ~ 2,
                   BTSEX %in% "A" ~ -1
                 )) |>
-  # data.table::setDT()
-  arrow::arrow_table()
+  data.table::setDT()
+# arrow::arrow_table()
 
 ## Help and intro data
 # steps <- readr::read_csv("data/help.csv")
@@ -100,10 +100,10 @@ csd_shp <- data.table::setDT(cancensus::get_census(
     tolower(stringr::str_extract(name, "\\(([^()]*)\\)$")) %in% "(t)" , "Town"
   ),
   name = stringr::str_remove(name, "\\(([^()]*)\\)$"))][,
-       c("GeoUID","CD_UID","CMA_UID", "name","csd_type",
-       "Dwellings 2016", "Dwellings", "Population 2016", "Population",
-       "Households 2016", "Households", "Shape Area",
-       "geometry")]
+                                                        c("GeoUID","CD_UID","CMA_UID", "name","csd_type",
+                                                          "Dwellings 2016", "Dwellings", "Population 2016", "Population",
+                                                          "Households 2016", "Households", "Shape Area",
+                                                          "geometry")]
 
 cd_shp <- data.table::setDT(cancensus::get_census(
   dataset = "CA21",
@@ -113,9 +113,9 @@ cd_shp <- data.table::setDT(cancensus::get_census(
   api_key = key
 ))[,`:=` (name = stringr::str_remove(name, " \\(CTY\\)"),
           cd_type = "County")][,
-       c("GeoUID", "name", "cd_type", "Dwellings 2016","Dwellings", 
-       "Population 2016", "Population", "Households 2016",
-       "Households", "Shape Area", "geometry")]
+                               c("GeoUID", "name", "cd_type", "Dwellings 2016","Dwellings", 
+                                 "Population 2016", "Population", "Households 2016",
+                                 "Households", "Shape Area", "geometry")]
 
 # cd_names <- data.frame(CD_UID = cd_shp$GeoUID, cd_full = cd_shp$name)
 
@@ -127,7 +127,7 @@ clus <- data.table::setDT(
   sf::read_sf(
     "./data/NSC_clusters.shp") %>%
     sf::st_make_valid()
-  )
+)
 
 hn <- data.table::setDT(
   sf::read_sf(
@@ -168,7 +168,7 @@ metrics_list <- list(
           select(BIRTHID, BrthYear, CSDuid) %>% 
           unique() %>% 
           collect()
-          ),
+      ),
       accuracy = 1), "total births")
   ),
   anomalies = list(
@@ -178,7 +178,7 @@ metrics_list <- list(
         cd_anom %>% 
           select(CaseID, BrthYear, CSDuid, Diags) %>%
           collect()
-        ),
+      ),
       accuracy = 1), "records")
   ),
   rate = list(
@@ -188,13 +188,13 @@ metrics_list <- list(
         cd_anom %>%
           select(CaseID, BrthYear, CSDuid, Diags) %>%
           collect()
-        )/nrow(
-          cd_birth %>% 
-            filter(tolower(dlv) %in% c("lvb", "stillbirth")) %>% 
-            select(BIRTHID, BrthYear, CSDuid) %>% 
-            unique() %>% 
-            collect()
-          ),
+      )/nrow(
+        cd_birth %>% 
+          filter(tolower(dlv) %in% c("lvb", "stillbirth")) %>% 
+          select(BIRTHID, BrthYear, CSDuid) %>% 
+          unique() %>% 
+          collect()
+      ),
       accuracy = 0.1)
   ),
   infants = list(
@@ -254,10 +254,10 @@ names(icd10_opts) <- c(
   cd_anom %>% filter(grepl("^Q71[4-9]|Q72[4-9]|Q738", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
   cd_anom %>% filter(grepl("^Q79[2-3]", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull(),
   cd_anom %>% filter(grepl("^Q909|Q90$|Q91[4-7]|Q91[0-3]|Q96", Diags)) %>% select(cat_tier3) %>% unique() %>% collect() %>% pull()
-  )
+)
 
 risk_opts <- sort(c("SexNum","matage","smoker","bmipp","diab","Cannabis_Use","Alcohol_Use"#,"area"
-                    ))
+))
 names(risk_opts) <- c("Alcohol Use",
                       # "Location",
                       "BMI",
@@ -276,7 +276,7 @@ names(geo_opts) <- c("Municipalities (CSD)",
                      "Community health networks",
                      # "Management Zones",
                      "Urban-rural"
-                     )
+)
 
 
 rcp_logo <- tags$a(

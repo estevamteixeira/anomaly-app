@@ -41,10 +41,10 @@ body {
 
   &.simple-grid {
     grid-template-areas:
-      "gm1       gm2       gm3 "
-      "table     table     barchart"
-      "linechart linechart linechart";
-    grid-template-columns: repeat(3, 1fr);
+      "gm1       gm2       gm3       gm4"
+      "table     table     barchart  barchart"
+      "linechart linechart linechart linechart";
+    grid-template-columns: repeat(4, 1fr);
     grid-template-rows: auto 480px;
   }
 
@@ -65,11 +65,12 @@ body {
         "gm1       gm1     "
         "gm2       gm2     "
         "gm3       gm3     "
+        "gm4       gm4     "
         "table     table   "
         "barchart  barchart"
         "linechart linehcart";
       grid-template-columns: repeat(2, 1fr);
-      grid-template-rows: repeat(2, auto) repeat(2, 480px);
+      grid-template-rows: repeat(2, auto) repeat(3, 480px);
     }
   
     &.advanced-grid {
@@ -95,7 +96,7 @@ body {
     border-color: white
 }
 
-#risk_info, #line_info, #cond_info {
+#risk_info, #line_info, #cond_info, #map_info {
     background: $color-secondary;
     color: white;
     border-color: $color-terciary

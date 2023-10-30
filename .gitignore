@@ -7,3 +7,6 @@ data/
 *.rds
 *.knit.md
 rsconnect/
+
+# log files
+bash_script_collection/docker_log_files

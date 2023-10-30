@@ -1,76 +1,46 @@
 # Use 'import' from the 'modules' package.
 # These listed imports are made available inside the module scope.
-import("arrow")
 import("data.table")
 import("dplyr")
 import("lubridate")
 
-# Filtering and select data ------
-
-getSubsetByTimeRange <- function(
-    df,
-    y1,
-    y2,
-    q = NULL, 
-    colsToSelect = c(
-      "CSDuid")
-    ) {
+getSubsetByTimeRange <- function(df, y1, y2, q = NULL) {
+  # colsToSelect <- c("CDuid", "cd_full", "BrthYear", "cd.count_anom", 
+  #                   "total_lvb")
+  if (is.null(q) || q == "0") 
+    return(subset(
+      x = df,
+      subset = data.table::between(BrthYear, y1, y2) #includes boundaries
+      # select = colsToSelect
+    ))
   
-  import("data.table")
-  import("dplyr")
+  if (!q == "0" &&
+      is.na(stringr::str_extract(q, pattern = "\\(.*\\)")))
+    return(subset(
+      x = df,
+      subset = data.table::between(BrthYear, y1, y2) & cat_tier3 %in% q
+      # select = colsToSelect
+    ))
   
-  if (is.null(q) || q == "0") {
-    return(
-      df %>%
-        dplyr::filter(
-          dplyr::between(BrthYear, y1, y2)
-          ) %>%
-        dplyr::select(
-          all_of(colsToSelect)
-          )
-    )
-  }
+  return(subset(
+    x = df,
+    subset = data.table::between(BrthYear, y1, y2) & cat_tier4 %in% q
+    # select = colsToSelect
+  ))
   
-  if (!q == "0" && is.na(
-    stringr::str_extract(q, pattern = "\\(.*\\)")
-    )) {
-    return(
-      df %>%
-        dplyr::filter(
-          dplyr::between(BrthYear, y1, y2) & cat_tier3 %in% q) %>%
-        dplyr::select(
-          all_of(colsToSelect)
-          )
-      )
-  }
-  
-  return(
-    df %>%
-      dplyr::filter(
-        dplyr::between(BrthYear, y1, y2) & cat_tier4 %in% q) %>%
-      dplyr::select(
-        all_of(colsToSelect)
-        )
-    )
 }
-
 
 getGeoData <- function(df,
                        y1, y2,
-                       colsToSelect,
+                       ColsToSelect,
                        bygroup) {
- # eval(substitute({
-  unique(
-    getSubsetByTimeRange(
-      df,
-      y1,
-      y2,
-      q = NULL)[,
-                .SD,
-                .SDcols = ColsToSelect
+  # eval(substitute({
+  unique(getSubsetByTimeRange(df, y1, y2, q = NULL)[,
+                                                    .SD,
+                                                    .SDcols = ColsToSelect
   ])[,
-      `:=` (total_cases = .N), by = bygroup
-    ]
+     `:=` (total_cases = .N), by = bygroup
+  ]
   # }))
 }
 
@@ -82,35 +52,24 @@ sumAllNonNAValues <- function(v) {
   }
 }
 
-getGeoDataByCase <- function(df,
-                             y1, y2,
+getGeoDataByCase <- function(df, y1, y2,
                              q,
-                             colsToSelect,
+                             ColsToSelect,
                              bygroup){
-  import("data.table")
-  
   # eval(substitute({
-  unique(
-    setDT(
-      getSubsetByTimeRange(
-        df,
-        y1,
-        y2, 
-        q,
-        colsToSelect))[,
-                       .SD,
-                       .SDcols = colsToSelect
-                       ])[,
-    `:=` (total_cases = .N),
-    by = bygroup
+  unique(getSubsetByTimeRange(df, y1, y2, q)[,
+                                             .SD,
+                                             .SDcols = ColsToSelect
+  ])[,
+     `:=` (total_cases = .N),
+     by = bygroup
   ]
   # }))
 }
 
 # Case -------
 
-buildGeoDataByCase <- function(df1,
-                               df2,
+buildGeoDataByCase <- function(df1, df2,
                                y1, y2,
                                q,
                                geo){
@@ -126,25 +85,21 @@ buildGeoDataByCase <- function(df1,
             unique(
               getGeoDataByCase(
                 df1,
-                y1, y2,
+                y1,
+                y2,
                 q = NULL,
-                colsToSelect = c(
-                  "CaseID", "CSDuid", "CSDName", "CSDType", "BrthYear"),
-                bygroup = c("CSDuid")
-                )[, c("CSDuid", "CSDName", "CSDType", "total_cases")
+                c("CaseID", "CSDuid", "CSDName", "CSDType", "BrthYear"),
+                c("CSDuid"))[, c("CSDuid", "CSDName", "CSDType", "total_cases")
                 ]),
             unique(
               unique(
                 unique(
-                  setDT(
-                    getSubsetByTimeRange(
-                      df2,
-                      y1,
-                      y2,
-                      colsToSelect = c(
-                        "BIRTHID", "CSDuid", "CSDName", "BrthYear", "dlv")
-                      ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                      ][, `:=` (count_dlv_geo_yr = .N),
+                  getSubsetByTimeRange(
+                    df2,
+                    y1,
+                    y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
+                        c("BIRTHID", "CSDuid", "CSDName", "BrthYear", "dlv")
+                    ][, `:=` (count_dlv_geo_yr = .N),
                       by = list(BrthYear, CSDuid, dlv)
                     ][,
                       c("CSDuid", "CSDName", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -172,7 +127,7 @@ buildGeoDataByCase <- function(df1,
               order(-rate)
             ][
               !is.na(rate)
-              ]
+            ]
       )
     
     if (tolower(tolower(geo) %in% "cd"))
@@ -182,23 +137,21 @@ buildGeoDataByCase <- function(df1,
             unique(
               getGeoDataByCase(
                 df1,
-                y1, y2,
+                y1,
+                y2,
                 q = NULL,
-                colsToSelect = c("CaseID", "CDuid", "CDName", "BrthYear"),
-                bygroup = c("CDuid"))[, c("CDuid", "CDName", "total_cases")
+                c("CaseID", "CDuid", "CDName", "BrthYear"),
+                c("CDuid"))[, c("CDuid", "CDName", "total_cases")
                 ]),
             unique(
               unique(
                 unique(
-                  setDT(
-                    getSubsetByTimeRange(
-                      df2,
-                      y1,
-                      y2,
-                      colsToSelect = c(
-                        "BIRTHID", "CDuid", "CDName", "BrthYear", "dlv")
-                      ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                         ][, `:=` (count_dlv_geo_yr = .N),
+                  getSubsetByTimeRange(
+                    df2,
+                    y1,
+                    y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
+                        c("BIRTHID", "CDuid", "CDName", "BrthYear", "dlv")
+                    ][, `:=` (count_dlv_geo_yr = .N),
                       by = list(BrthYear, CDuid, dlv)
                     ][,
                       c("CDuid", "CDName", "BrthYear", "dlv","count_dlv_geo_yr")
@@ -241,20 +194,18 @@ buildGeoDataByCase <- function(df1,
                 y1,
                 y2,
                 q = NULL,
-                colsToSelect = c("CaseID", "Cluster_Number", "ClusterName", "BrthYear"),
-                bygroup = c("Cluster_Number"))[, c("Cluster_Number", "ClusterName", "total_cases")
+                c("CaseID", "Cluster_Number", "ClusterName", "BrthYear"),
+                c("Cluster_Number"))[, c("Cluster_Number", "ClusterName", "total_cases")
                 ]),
             unique(
               unique(
                 unique(
-                  setDT(
-                    getSubsetByTimeRange(
-                      df2,
-                      y1,
-                      y2,
-                      colsToSelect = c("BIRTHID", "Cluster_Number", "ClusterName", "BrthYear", "dlv")
-                      ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                         ][, `:=` (count_dlv_geo_yr = .N),
+                  getSubsetByTimeRange(
+                    df2,
+                    y1,
+                    y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
+                        c("BIRTHID", "Cluster_Number", "ClusterName", "BrthYear", "dlv")
+                    ][, `:=` (count_dlv_geo_yr = .N),
                       by = list(BrthYear, Cluster_Number, dlv)
                     ][,
                       c("Cluster_Number", "ClusterName", "BrthYear", "dlv","count_dlv_geo_yr")
@@ -297,20 +248,18 @@ buildGeoDataByCase <- function(df1,
                 y1,
                 y2,
                 q = NULL,
-                colsToSelect = c("CaseID", "NetworkID", "NetworkName", "BrthYear"),
-                bygroup = c("NetworkID"))[, c("NetworkID", "NetworkName", "total_cases")
+                c("CaseID", "NetworkID", "NetworkName", "BrthYear"),
+                c("NetworkID"))[, c("NetworkID", "NetworkName", "total_cases")
                 ]),
             unique(
               unique(
                 unique(
-                  setDT(
-                    getSubsetByTimeRange(
-                      df2,
-                      y1,
-                      y2,
-                      colsToSelect = c("BIRTHID", "NetworkID", "NetworkName", "BrthYear", "dlv")
-                      ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                         ][, `:=` (count_dlv_geo_yr = .N),
+                  getSubsetByTimeRange(
+                    df2,
+                    y1,
+                    y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
+                        c("BIRTHID", "NetworkID", "NetworkName", "BrthYear", "dlv")
+                    ][, `:=` (count_dlv_geo_yr = .N),
                       by = list(BrthYear, NetworkID, dlv)
                     ][,
                       c("NetworkID", "NetworkName", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -351,29 +300,27 @@ buildGeoDataByCase <- function(df1,
                 y1,
                 y2,
                 q = NULL,
-                colsToSelect = c("CaseID", "CSDuid", "ZoneID", "ZnName", "BrthYear"),
-                bygroup = c("ZoneID"))[, c("CSDuid", "ZoneID", "ZnName", "total_cases")
+                c("CaseID", "CSDuid", "ZoneID", "ZnName", "BrthYear"),
+                c("ZoneID"))[, c("CSDuid", "ZoneID", "ZnName", "total_cases")
                 ]),
             unique(
               unique(
-                setDT(
-                  getSubsetByTimeRange(
-                    df2,
-                    y1,
-                    y2,
-                    colsToSelect = c("BIRTHID", "CSDuid", "ZoneID", "ZnName", "BrthYear", "dlv")
-                    ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                       ][, `:=` (count_dlv_geo_yr = .N),
-                      by = list(BrthYear, CSDuid, ZoneID, dlv)
-                    ][,
-                      c("CSDuid", "ZoneID", "ZnName", "BrthYear", "dlv", "count_dlv_geo_yr")
-                    ])[,
-                `:=` (total_lvb_geo = sum(count_dlv_geo_yr,
-                                          na.rm = TRUE)),
-                by = c("ZoneID")
-              ][,
-                c("CSDuid", "ZoneID", "ZnName", "total_lvb_geo")
-              ]),
+                getSubsetByTimeRange(
+                  df2,
+                  y1,
+                  y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
+                      c("BIRTHID", "CSDuid", "ZoneID", "ZnName", "BrthYear", "dlv")
+                  ][, `:=` (count_dlv_geo_yr = .N),
+                    by = list(BrthYear, CSDuid, ZoneID, dlv)
+                  ][,
+                    c("CSDuid", "ZoneID", "ZnName", "BrthYear", "dlv", "count_dlv_geo_yr")
+                  ])[,
+                     `:=` (total_lvb_geo = sum(count_dlv_geo_yr,
+                                               na.rm = TRUE)),
+                     by = c("ZoneID")
+                  ][,
+                    c("CSDuid", "ZoneID", "ZnName", "total_lvb_geo")
+                  ]),
             by = c("ZoneID", "ZnName","CSDuid"),
             allow.cartesian = TRUE,
             all.y = TRUE)[
@@ -399,29 +346,27 @@ buildGeoDataByCase <- function(df1,
                 y1,
                 y2,
                 q = NULL,
-                colsToSelect = c("CaseID", "CSDuid", "area", "BrthYear"),
-                bygroup = c("area"))[, c("CSDuid", "area", "total_cases")
+                c("CaseID", "CSDuid", "area", "BrthYear"),
+                c("area"))[, c("CSDuid", "area", "total_cases")
                 ]),
             unique(
               unique(
                 getSubsetByTimeRange(
-                  setDT(
-                    df2,
-                    y1,
-                    y2,
-                    colsToSelect = c("BIRTHID", "CSDuid", "area", "BrthYear", "dlv")
-                    ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                       ][, `:=` (count_dlv_geo_yr = .N),
-                      by = list(BrthYear, CSDuid, area, dlv)
-                    ][,
-                      c("CSDuid", "area", "BrthYear", "dlv", "count_dlv_geo_yr")
-                    ])[,
-                `:=` (total_lvb_geo = sum(count_dlv_geo_yr,
-                                          na.rm = TRUE)),
-                by = c("area")
-              ][,
-                c("CSDuid", "area", "total_lvb_geo")
-              ]),
+                  df2,
+                  y1,
+                  y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
+                      c("BIRTHID", "CSDuid", "area", "BrthYear", "dlv")
+                  ][, `:=` (count_dlv_geo_yr = .N),
+                    by = list(BrthYear, CSDuid, area, dlv)
+                  ][,
+                    c("CSDuid", "area", "BrthYear", "dlv", "count_dlv_geo_yr")
+                  ])[,
+                     `:=` (total_lvb_geo = sum(count_dlv_geo_yr,
+                                               na.rm = TRUE)),
+                     by = c("area")
+                  ][,
+                    c("CSDuid", "area", "total_lvb_geo")
+                  ]),
             by = c("CSDuid", "area"),
             allow.cartesian = TRUE,
             all.y = TRUE)[
@@ -436,35 +381,34 @@ buildGeoDataByCase <- function(df1,
             ]
       )
     
-  } else if (!q == "0" && all(is.na(stringr::str_extract(q, pattern = "\\(.*\\)")))){
+  } else if (!q == "0" &&
+             all(is.na(stringr::str_extract(q, pattern = "\\(.*\\)")))){
     if (tolower(tolower(geo) %in% "csd"))
       return(
         unique(
           merge(
             unique(
               unique(
-              getGeoDataByCase(
-                df1,
-                y1,
-                y2,
-                q,
-                c("CaseID", "CSDuid", "CSDName", "CSDType", "BrthYear", "cat_tier3"),
-                c("CSDuid", "BrthYear"))[,
-                    c("CSDuid", "CSDName", "BrthYear","cat_tier3", "total_cases")
-                ])[,
-                   `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
-                   by = list(CSDuid, cat_tier3)
-                   ]),
+                getGeoDataByCase(
+                  df1,
+                  y1,
+                  y2,
+                  q,
+                  c("CaseID", "CSDuid", "CSDName", "CSDType", "BrthYear", "cat_tier3"),
+                  c("CSDuid", "BrthYear"))[,
+                                           c("CSDuid", "CSDName", "BrthYear","cat_tier3", "total_cases")
+                  ])[,
+                     `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
+                     by = list(CSDuid, cat_tier3)
+                  ]),
             unique(
               unique(
-                setDT(
                 getSubsetByTimeRange(
                   df2,
                   y1,
-                  y2,
-                  colsToSelect = c("BIRTHID", "CSDuid", "CSDName", "BrthYear", "dlv")
-                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                     ][, `:=` (count_dlv_geo_yr = .N),
+                  y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
+                      c("BIRTHID", "CSDuid", "CSDName", "BrthYear", "dlv")
+                  ][, `:=` (count_dlv_geo_yr = .N),
                     by = list(BrthYear, CSDuid, dlv)
                   ][,
                     c("CSDuid", "CSDName", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -506,47 +450,45 @@ buildGeoDataByCase <- function(df1,
                   q,
                   c("CaseID", "CDuid", "CDName", "BrthYear","cat_tier3"),
                   c("CDuid", "BrthYear"))[,
-                      c("CDuid", "CDName", "BrthYear","cat_tier3", "total_cases")
-              ])[,
-                 `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
-                 by = list(CDuid, cat_tier3)
-              ]),
-          unique(
+                                          c("CDuid", "CDName", "BrthYear","cat_tier3", "total_cases")
+                  ])[,
+                     `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
+                     by = list(CDuid, cat_tier3)
+                  ]),
             unique(
-              setDT(
+              unique(
                 getSubsetByTimeRange(
                   df2,
                   y1,
-                  y2,
-                  colsToSelect = c("BIRTHID", "CDuid", "CDName", "BrthYear", "dlv")
-                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                     ][, `:=` (count_dlv_geo_yr = .N),
-                  by = list(BrthYear, CDuid, dlv)
-                ][,
-                  c("CDuid", "CDName", "BrthYear", "dlv", "count_dlv_geo_yr")
-                ])[,
-                   `:=` (total_lvb_geo_yr = sum(count_dlv_geo_yr,
-                                                na.rm = TRUE)),
-                   by = c("CDuid","BrthYear")
-                ][,
-                  c("CDuid", "CDName", "BrthYear", "total_lvb_geo_yr")
-                ])[,
-                   `:=` (total_lvb_geo = sum(total_lvb_geo_yr,
-                                             na.rm = TRUE)),
-                   by = c("CDuid")
-                ],
-          by = c("CDuid", "CDName", "BrthYear"),
-          allow.cartesian = TRUE,
-          all.x = TRUE)[
-            !is.na(CDName), c("CDuid", "CDName", "total_cases","total_lvb_geo")
-          ][,
-            `:=` (rate = 1000*total_cases/total_lvb_geo),
-            by = c("CDuid")
-          ][
-            order(-rate)
-          ][
-            !is.na(rate)
-          ])
+                  y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
+                      c("BIRTHID", "CDuid", "CDName", "BrthYear", "dlv")
+                  ][, `:=` (count_dlv_geo_yr = .N),
+                    by = list(BrthYear, CDuid, dlv)
+                  ][,
+                    c("CDuid", "CDName", "BrthYear", "dlv", "count_dlv_geo_yr")
+                  ])[,
+                     `:=` (total_lvb_geo_yr = sum(count_dlv_geo_yr,
+                                                  na.rm = TRUE)),
+                     by = c("CDuid","BrthYear")
+                  ][,
+                    c("CDuid", "CDName", "BrthYear", "total_lvb_geo_yr")
+                  ])[,
+                     `:=` (total_lvb_geo = sum(total_lvb_geo_yr,
+                                               na.rm = TRUE)),
+                     by = c("CDuid")
+                  ],
+            by = c("CDuid", "CDName", "BrthYear"),
+            allow.cartesian = TRUE,
+            all.x = TRUE)[
+              !is.na(CDName), c("CDuid", "CDName", "total_cases","total_lvb_geo")
+            ][,
+              `:=` (rate = 1000*total_cases/total_lvb_geo),
+              by = c("CDuid")
+            ][
+              order(-rate)
+            ][
+              !is.na(rate)
+            ])
       )
     
     if (tolower(tolower(geo) %in% "clus"))
@@ -562,47 +504,45 @@ buildGeoDataByCase <- function(df1,
                   q,
                   c("CaseID", "Cluster_Number", "ClusterName", "BrthYear","cat_tier3"),
                   c("Cluster_Number", "BrthYear"))[,
-                        c("Cluster_Number", "ClusterName", "BrthYear","cat_tier3", "total_cases")
-              ])[,
-                 `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
-                 by = list(Cluster_Number, cat_tier3)
-              ]),
-          unique(
+                                                   c("Cluster_Number", "ClusterName", "BrthYear","cat_tier3", "total_cases")
+                  ])[,
+                     `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
+                     by = list(Cluster_Number, cat_tier3)
+                  ]),
             unique(
-              setDT(
+              unique(
                 getSubsetByTimeRange(
                   df2,
                   y1,
-                  y2,
-                  colsToSelect = c("BIRTHID", "Cluster_Number", "ClusterName", "BrthYear", "dlv")
-                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                     ][, `:=` (count_dlv_geo_yr = .N),
-                  by = list(BrthYear, Cluster_Number, dlv)
-                ][,
-                  c("Cluster_Number", "ClusterName", "BrthYear", "dlv", "count_dlv_geo_yr")
-                ])[,
-                   `:=` (total_lvb_geo_yr = sum(count_dlv_geo_yr,
-                                                na.rm = TRUE)),
-                   by = c("Cluster_Number","BrthYear")
-                ][,
-                  c("Cluster_Number", "ClusterName", "BrthYear", "total_lvb_geo_yr")
-                ])[,
-                   `:=` (total_lvb_geo = sum(total_lvb_geo_yr,
-                                             na.rm = TRUE)),
-                   by = c("Cluster_Number")
-                ],
-          by = c("Cluster_Number", "ClusterName", "BrthYear"),
-          allow.cartesian = TRUE,
-          all.x = TRUE)[
-            !is.na(ClusterName), c("Cluster_Number", "ClusterName", "total_cases","total_lvb_geo")
-          ][,
-            `:=` (rate = 1000*total_cases/total_lvb_geo),
-            by = c("Cluster_Number")
-          ][
-            order(-rate)
-          ][
-            !is.na(rate)
-          ])
+                  y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
+                      c("BIRTHID", "Cluster_Number", "ClusterName", "BrthYear", "dlv")
+                  ][, `:=` (count_dlv_geo_yr = .N),
+                    by = list(BrthYear, Cluster_Number, dlv)
+                  ][,
+                    c("Cluster_Number", "ClusterName", "BrthYear", "dlv", "count_dlv_geo_yr")
+                  ])[,
+                     `:=` (total_lvb_geo_yr = sum(count_dlv_geo_yr,
+                                                  na.rm = TRUE)),
+                     by = c("Cluster_Number","BrthYear")
+                  ][,
+                    c("Cluster_Number", "ClusterName", "BrthYear", "total_lvb_geo_yr")
+                  ])[,
+                     `:=` (total_lvb_geo = sum(total_lvb_geo_yr,
+                                               na.rm = TRUE)),
+                     by = c("Cluster_Number")
+                  ],
+            by = c("Cluster_Number", "ClusterName", "BrthYear"),
+            allow.cartesian = TRUE,
+            all.x = TRUE)[
+              !is.na(ClusterName), c("Cluster_Number", "ClusterName", "total_cases","total_lvb_geo")
+            ][,
+              `:=` (rate = 1000*total_cases/total_lvb_geo),
+              by = c("Cluster_Number")
+            ][
+              order(-rate)
+            ][
+              !is.na(rate)
+            ])
       )
     
     if (tolower(tolower(geo) %in% "hn"))
@@ -611,54 +551,52 @@ buildGeoDataByCase <- function(df1,
           merge(
             unique(
               unique(
-            getGeoDataByCase(
-              df1,
-              y1,
-              y2,
-              q,
-              c("CaseID", "NetworkID", "NetworkName", "BrthYear","cat_tier3"),
-              c("NetworkID", "BrthYear"))[,
-                                          c("NetworkID", "NetworkName", "BrthYear","cat_tier3", "total_cases")
-              ])[,
-                 `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
-                 by = list(NetworkID, cat_tier3)
-              ]),
-          unique(
+                getGeoDataByCase(
+                  df1,
+                  y1,
+                  y2,
+                  q,
+                  c("CaseID", "NetworkID", "NetworkName", "BrthYear","cat_tier3"),
+                  c("NetworkID", "BrthYear"))[,
+                                              c("NetworkID", "NetworkName", "BrthYear","cat_tier3", "total_cases")
+                  ])[,
+                     `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
+                     by = list(NetworkID, cat_tier3)
+                  ]),
             unique(
-              setDT(
+              unique(
                 getSubsetByTimeRange(
                   df2,
                   y1,
-                  y2,
-                  colsToSelect = c("BIRTHID", "NetworkID", "NetworkName", "BrthYear", "dlv")
-                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                     ][, `:=` (count_dlv_geo_yr = .N),
-                  by = list(BrthYear, NetworkID, dlv)
-                ][,
-                  c("NetworkID", "NetworkName", "BrthYear", "dlv", "count_dlv_geo_yr")
-                ])[,
-                   `:=` (total_lvb_geo_yr = sum(count_dlv_geo_yr,
-                                                na.rm = TRUE)),
-                   by = c("NetworkID","BrthYear")
-                ][,
-                  c("NetworkID", "NetworkName", "BrthYear", "total_lvb_geo_yr")
-                ])[,
-                   `:=` (total_lvb_geo = sum(total_lvb_geo_yr,
-                                             na.rm = TRUE)),
-                   by = c("NetworkID")
-                ],
-          by = c("NetworkID", "NetworkName", "BrthYear"),
-          allow.cartesian = TRUE,
-          all.x = TRUE)[
-            !is.na(NetworkName), c("NetworkID", "NetworkName", "total_cases", "total_lvb_geo")
-          ][,
-            `:=` (rate = 1000*total_cases/total_lvb_geo),
-            by = c("NetworkID")
-          ][
-            order(-rate)
-          ][
-            !is.na(rate)
-          ])
+                  y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
+                      c("BIRTHID", "NetworkID", "NetworkName", "BrthYear", "dlv")
+                  ][, `:=` (count_dlv_geo_yr = .N),
+                    by = list(BrthYear, NetworkID, dlv)
+                  ][,
+                    c("NetworkID", "NetworkName", "BrthYear", "dlv", "count_dlv_geo_yr")
+                  ])[,
+                     `:=` (total_lvb_geo_yr = sum(count_dlv_geo_yr,
+                                                  na.rm = TRUE)),
+                     by = c("NetworkID","BrthYear")
+                  ][,
+                    c("NetworkID", "NetworkName", "BrthYear", "total_lvb_geo_yr")
+                  ])[,
+                     `:=` (total_lvb_geo = sum(total_lvb_geo_yr,
+                                               na.rm = TRUE)),
+                     by = c("NetworkID")
+                  ],
+            by = c("NetworkID", "NetworkName", "BrthYear"),
+            allow.cartesian = TRUE,
+            all.x = TRUE)[
+              !is.na(NetworkName), c("NetworkID", "NetworkName", "total_cases", "total_lvb_geo")
+            ][,
+              `:=` (rate = 1000*total_cases/total_lvb_geo),
+              by = c("NetworkID")
+            ][
+              order(-rate)
+            ][
+              !is.na(rate)
+            ])
       )
     
     if (tolower(tolower(geo) %in% "zn"))
@@ -674,28 +612,26 @@ buildGeoDataByCase <- function(df1,
                   q,
                   c("CaseID", "CSDuid", "ZoneID", "ZnName", "BrthYear","cat_tier3"),
                   c("ZoneID", "BrthYear"))[,
-                    c("CSDuid", "ZoneID", "ZnName", "BrthYear","cat_tier3", "total_cases")
+                                           c("CSDuid", "ZoneID", "ZnName", "BrthYear","cat_tier3", "total_cases")
                   ])[,
                      `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                      by = list(ZoneID, cat_tier3)
                   ]),
             unique(
-              setDT(
-                getSubsetByTimeRange(
-                  df2,
-                  y1,
-                  y2,
-                  colsToSelect = c("BIRTHID", "CSDuid","ZoneID", "ZnName", "BrthYear", "dlv")
-                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                     ][, `:=` (count_dlv_geo_yr = .N),
-                    by = list(BrthYear, CSDuid, ZoneID, dlv)
-                  ][,
-                    c("CSDuid", "ZoneID", "ZnName", "BrthYear", "dlv", "count_dlv_geo_yr")
-                  ])[,
-                     `:=` (total_lvb_geo = sum(count_dlv_geo_yr,
-                                               na.rm = TRUE)),
-                     by = c("ZoneID")
-                  ],
+              getSubsetByTimeRange(
+                df2,
+                y1,
+                y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
+                    c("BIRTHID", "CSDuid","ZoneID", "ZnName", "BrthYear", "dlv")
+                ][, `:=` (count_dlv_geo_yr = .N),
+                  by = list(BrthYear, CSDuid, ZoneID, dlv)
+                ][,
+                  c("CSDuid", "ZoneID", "ZnName", "BrthYear", "dlv", "count_dlv_geo_yr")
+                ])[,
+                   `:=` (total_lvb_geo = sum(count_dlv_geo_yr,
+                                             na.rm = TRUE)),
+                   by = c("ZoneID")
+                ],
             by = c("CSDuid", "ZoneID", "ZnName", "BrthYear"),
             allow.cartesian = TRUE,
             all.x = TRUE)[
@@ -724,20 +660,18 @@ buildGeoDataByCase <- function(df1,
                   q,
                   c("CaseID", "CSDuid", "area", "BrthYear","cat_tier3"),
                   c("area", "BrthYear"))[,
-                        c("CSDuid", "area", "BrthYear","cat_tier3", "total_cases")
+                                         c("CSDuid", "area", "BrthYear","cat_tier3", "total_cases")
                   ])[,
                      `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                      by = list(area, cat_tier3)
                   ]),
             unique(
-              setDT(
-                getSubsetByTimeRange(
-                  df2,
-                  y1,
-                  y2,
-                  colsToSelect = c("BIRTHID", "CSDuid", "area", "BrthYear", "dlv")
-                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                     ][, `:=` (count_dlv_geo_yr = .N),
+              getSubsetByTimeRange(
+                df2,
+                y1,
+                y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
+                    c("BIRTHID", "CSDuid", "area", "BrthYear", "dlv")
+                ][, `:=` (count_dlv_geo_yr = .N),
                   by = list(BrthYear, CSDuid, area, dlv)
                 ][,
                   c("CSDuid", "area", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -766,29 +700,27 @@ buildGeoDataByCase <- function(df1,
         unique(
           merge(
             unique(
-            unique(
-              getGeoDataByCase(
-                df1,
-                y1,
-                y2,
-                q,
-                c("CaseID", "CSDuid", "CSDName", "BrthYear","cat_tier4"),
-                c("CSDuid", "BrthYear"))[,
-                    c("CSDuid", "CSDName", "BrthYear","cat_tier4", "total_cases")
-                ])[,
-                   `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
-                   by = list(CSDuid, cat_tier4)
-                ]),
+              unique(
+                getGeoDataByCase(
+                  df1,
+                  y1,
+                  y2,
+                  q,
+                  c("CaseID", "CSDuid", "CSDName", "BrthYear","cat_tier4"),
+                  c("CSDuid", "BrthYear"))[,
+                                           c("CSDuid", "CSDName", "BrthYear","cat_tier4", "total_cases")
+                  ])[,
+                     `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
+                     by = list(CSDuid, cat_tier4)
+                  ]),
             unique(
               unique(
-                setDT(
-                  getSubsetByTimeRange(
-                    df2,
-                    y1,
-                    y2,
-                    colsToSelect = c("BIRTHID", "CSDuid", "CSDName", "BrthYear", "dlv")
-                    ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                       ][, `:=` (count_dlv_geo_yr = .N),
+                getSubsetByTimeRange(
+                  df2,
+                  y1,
+                  y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
+                      c("BIRTHID", "CSDuid", "CSDName", "BrthYear", "dlv")
+                  ][, `:=` (count_dlv_geo_yr = .N),
                     by = list(BrthYear, CSDuid, dlv)
                   ][,
                     c("CSDuid", "CSDName", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -824,53 +756,51 @@ buildGeoDataByCase <- function(df1,
             unique(
               unique(
                 getGeoDataByCase(
-                df1,
-                y1,
-                y2,
-                q,
-                c("CaseID", "CDuid", "CDName", "BrthYear","cat_tier4"),
-                c("CDuid", "BrthYear"))[,
-                    c("CDuid", "CDName", "BrthYear","cat_tier4", "total_cases")
-              ])[,
-                 `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
-                 by = list(CDuid, cat_tier4)
-              ]),
-          unique(
+                  df1,
+                  y1,
+                  y2,
+                  q,
+                  c("CaseID", "CDuid", "CDName", "BrthYear","cat_tier4"),
+                  c("CDuid", "BrthYear"))[,
+                                          c("CDuid", "CDName", "BrthYear","cat_tier4", "total_cases")
+                  ])[,
+                     `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
+                     by = list(CDuid, cat_tier4)
+                  ]),
             unique(
-              setDT(
+              unique(
                 getSubsetByTimeRange(
                   df2,
                   y1,
-                  y2,
-                  colsToSelect = c("BIRTHID", "CDuid", "CDName", "BrthYear", "dlv")
-                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                     ][, `:=` (count_dlv_geo_yr = .N),
-                  by = list(BrthYear, CDuid, dlv)
-                ][,
-                  c("CDuid", "CDName", "BrthYear", "dlv", "count_dlv_geo_yr")
-                ])[,
-                   `:=` (total_lvb_geo_yr = sum(count_dlv_geo_yr,
-                                                na.rm = TRUE)),
-                   by = c("CDuid","BrthYear")
-                ][,
-                  c("CDuid", "CDName", "BrthYear", "total_lvb_geo_yr")
-                ])[,
-                   `:=` (total_lvb_geo = sum(total_lvb_geo_yr,
-                                             na.rm = TRUE)),
-                   by = c("CDuid")
-                ],
-          by = c("CDuid", "CDName", "BrthYear"),
-          allow.cartesian = TRUE,
-          all.x = TRUE)[
-            !is.na(CDName), c("CDuid", "CDName", "total_cases","total_lvb_geo")
-          ][,
-            `:=` (rate = 1000*total_cases/total_lvb_geo),
-            by = c("CDuid")
-          ][
-            order(-rate)
-          ][
-            !is.na(rate)
-          ])
+                  y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
+                      c("BIRTHID", "CDuid", "CDName", "BrthYear", "dlv")
+                  ][, `:=` (count_dlv_geo_yr = .N),
+                    by = list(BrthYear, CDuid, dlv)
+                  ][,
+                    c("CDuid", "CDName", "BrthYear", "dlv", "count_dlv_geo_yr")
+                  ])[,
+                     `:=` (total_lvb_geo_yr = sum(count_dlv_geo_yr,
+                                                  na.rm = TRUE)),
+                     by = c("CDuid","BrthYear")
+                  ][,
+                    c("CDuid", "CDName", "BrthYear", "total_lvb_geo_yr")
+                  ])[,
+                     `:=` (total_lvb_geo = sum(total_lvb_geo_yr,
+                                               na.rm = TRUE)),
+                     by = c("CDuid")
+                  ],
+            by = c("CDuid", "CDName", "BrthYear"),
+            allow.cartesian = TRUE,
+            all.x = TRUE)[
+              !is.na(CDName), c("CDuid", "CDName", "total_cases","total_lvb_geo")
+            ][,
+              `:=` (rate = 1000*total_cases/total_lvb_geo),
+              by = c("CDuid")
+            ][
+              order(-rate)
+            ][
+              !is.na(rate)
+            ])
       )
     
     if (tolower(tolower(geo) %in% "clus"))
@@ -880,53 +810,51 @@ buildGeoDataByCase <- function(df1,
             unique(
               unique(
                 getGeoDataByCase(
-                df1,
-                y1,
-                y2,
-                q,
-                c("CaseID", "Cluster_Number", "ClusterName", "BrthYear","cat_tier4"),
-                c("Cluster_Number", "BrthYear"))[,
-                    c("Cluster_Number", "ClusterName", "BrthYear","cat_tier4", "total_cases")
-              ])[,
-                 `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
-                 by = list(Cluster_Number, cat_tier4)
-              ]),
-          unique(
+                  df1,
+                  y1,
+                  y2,
+                  q,
+                  c("CaseID", "Cluster_Number", "ClusterName", "BrthYear","cat_tier4"),
+                  c("Cluster_Number", "BrthYear"))[,
+                                                   c("Cluster_Number", "ClusterName", "BrthYear","cat_tier4", "total_cases")
+                  ])[,
+                     `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
+                     by = list(Cluster_Number, cat_tier4)
+                  ]),
             unique(
-              setDT(
+              unique(
                 getSubsetByTimeRange(
                   df2,
                   y1,
-                  y2,
-                  colsToSelect = c("BIRTHID", "Cluster_Number", "ClusterName", "BrthYear", "dlv")
-                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                     ][, `:=` (count_dlv_geo_yr = .N),
-                  by = list(BrthYear, Cluster_Number, dlv)
-                ][,
-                  c("Cluster_Number", "ClusterName", "BrthYear", "dlv", "count_dlv_geo_yr")
-                ])[,
-                   `:=` (total_lvb_geo_yr = sum(count_dlv_geo_yr,
-                                                na.rm = TRUE)),
-                   by = c("Cluster_Number","BrthYear")
-                ][,
-                  c("Cluster_Number", "ClusterName", "BrthYear", "total_lvb_geo_yr")
-                ])[,
-                   `:=` (total_lvb_geo = sum(total_lvb_geo_yr,
-                                             na.rm = TRUE)),
-                   by = c("Cluster_Number")
-                ],
-          by = c("Cluster_Number", "ClusterName", "BrthYear"),
-          allow.cartesian = TRUE,
-          all.x = TRUE)[
-            !is.na(ClusterName), c("Cluster_Number", "ClusterName", "total_cases","total_lvb_geo")
-          ][,
-            `:=` (rate = 1000*total_cases/total_lvb_geo),
-            by = c("Cluster_Number")
-          ][
-            order(-rate)
-          ][
-            !is.na(rate)
-          ])
+                  y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
+                      c("BIRTHID", "Cluster_Number", "ClusterName", "BrthYear", "dlv")
+                  ][, `:=` (count_dlv_geo_yr = .N),
+                    by = list(BrthYear, Cluster_Number, dlv)
+                  ][,
+                    c("Cluster_Number", "ClusterName", "BrthYear", "dlv", "count_dlv_geo_yr")
+                  ])[,
+                     `:=` (total_lvb_geo_yr = sum(count_dlv_geo_yr,
+                                                  na.rm = TRUE)),
+                     by = c("Cluster_Number","BrthYear")
+                  ][,
+                    c("Cluster_Number", "ClusterName", "BrthYear", "total_lvb_geo_yr")
+                  ])[,
+                     `:=` (total_lvb_geo = sum(total_lvb_geo_yr,
+                                               na.rm = TRUE)),
+                     by = c("Cluster_Number")
+                  ],
+            by = c("Cluster_Number", "ClusterName", "BrthYear"),
+            allow.cartesian = TRUE,
+            all.x = TRUE)[
+              !is.na(ClusterName), c("Cluster_Number", "ClusterName", "total_cases","total_lvb_geo")
+            ][,
+              `:=` (rate = 1000*total_cases/total_lvb_geo),
+              by = c("Cluster_Number")
+            ][
+              order(-rate)
+            ][
+              !is.na(rate)
+            ])
       )
     
     if (tolower(tolower(geo) %in% "hn"))
@@ -936,53 +864,51 @@ buildGeoDataByCase <- function(df1,
             unique(
               unique(
                 getGeoDataByCase(
-                df1,
-                y1,
-                y2,
-                q,
-                c("CaseID", "NetworkID", "NetworkName", "BrthYear","cat_tier4"),
-                c("NetworkID", "BrthYear"))[,
-                    c("NetworkID", "NetworkName", "BrthYear","cat_tier4", "total_cases")
-              ])[,
-                 `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
-                 by = list(NetworkID, cat_tier4)
-              ]),
-          unique(
+                  df1,
+                  y1,
+                  y2,
+                  q,
+                  c("CaseID", "NetworkID", "NetworkName", "BrthYear","cat_tier4"),
+                  c("NetworkID", "BrthYear"))[,
+                                              c("NetworkID", "NetworkName", "BrthYear","cat_tier4", "total_cases")
+                  ])[,
+                     `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
+                     by = list(NetworkID, cat_tier4)
+                  ]),
             unique(
-              setDT(
+              unique(
                 getSubsetByTimeRange(
                   df2,
                   y1,
-                  y2,
-                  colsToSelect = c("BIRTHID", "NetworkID", "NetworkName", "BrthYear", "dlv")
-                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                     ][, `:=` (count_dlv_geo_yr = .N),
-                  by = list(BrthYear, NetworkID, dlv)
-                ][,
-                  c("NetworkID", "NetworkName", "BrthYear", "dlv", "count_dlv_geo_yr")
-                ])[,
-                   `:=` (total_lvb_geo_yr = sum(count_dlv_geo_yr,
-                                                na.rm = TRUE)),
-                   by = c("NetworkID","BrthYear")
-                ][,
-                  c("NetworkID", "NetworkName", "BrthYear", "total_lvb_geo_yr")
-                ])[,
-                   `:=` (total_lvb_geo = sum(total_lvb_geo_yr,
-                                             na.rm = TRUE)),
-                   by = c("NetworkID")
-                ],
-          by = c("NetworkID", "NetworkName", "BrthYear"),
-          allow.cartesian = TRUE,
-          all.x = TRUE)[
-            !is.na(NetworkName), c("NetworkID", "NetworkName", "total_cases", "total_lvb_geo")
-          ][,
-            `:=` (rate = 1000*total_cases/total_lvb_geo),
-            by = c("NetworkID")
-          ][
-            order(-rate)
-          ][
-            !is.na(rate)
-          ])
+                  y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
+                      c("BIRTHID", "NetworkID", "NetworkName", "BrthYear", "dlv")
+                  ][, `:=` (count_dlv_geo_yr = .N),
+                    by = list(BrthYear, NetworkID, dlv)
+                  ][,
+                    c("NetworkID", "NetworkName", "BrthYear", "dlv", "count_dlv_geo_yr")
+                  ])[,
+                     `:=` (total_lvb_geo_yr = sum(count_dlv_geo_yr,
+                                                  na.rm = TRUE)),
+                     by = c("NetworkID","BrthYear")
+                  ][,
+                    c("NetworkID", "NetworkName", "BrthYear", "total_lvb_geo_yr")
+                  ])[,
+                     `:=` (total_lvb_geo = sum(total_lvb_geo_yr,
+                                               na.rm = TRUE)),
+                     by = c("NetworkID")
+                  ],
+            by = c("NetworkID", "NetworkName", "BrthYear"),
+            allow.cartesian = TRUE,
+            all.x = TRUE)[
+              !is.na(NetworkName), c("NetworkID", "NetworkName", "total_cases", "total_lvb_geo")
+            ][,
+              `:=` (rate = 1000*total_cases/total_lvb_geo),
+              by = c("NetworkID")
+            ][
+              order(-rate)
+            ][
+              !is.na(rate)
+            ])
       )
     
     if (tolower(tolower(geo) %in% "zn"))
@@ -998,28 +924,26 @@ buildGeoDataByCase <- function(df1,
                   q,
                   c("CaseID", "CSDuid", "ZoneID", "ZnName", "BrthYear","cat_tier4"),
                   c("ZoneID", "BrthYear"))[,
-                        c("CSDuid", "ZoneID", "ZnName", "BrthYear","cat_tier4", "total_cases")
+                                           c("CSDuid", "ZoneID", "ZnName", "BrthYear","cat_tier4", "total_cases")
                   ])[,
                      `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                      by = list(ZoneID, cat_tier4)
                   ]),
             unique(
-              setDT(
-                getSubsetByTimeRange(
-                  df2,
-                  y1,
-                  y2,
-                  colsToSelect = c("BIRTHID", "CSDuid", "ZoneID", "ZnName", "BrthYear", "dlv")
-                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                     ][, `:=` (count_dlv_geo_yr = .N),
-                    by = list(BrthYear, ZoneID, dlv)
-                  ][,
-                    c("CSDuid", "ZoneID", "ZnName", "BrthYear", "dlv", "count_dlv_geo_yr")
-                  ])[,
-                     `:=` (total_lvb_geo = sum(count_dlv_geo_yr,
-                                               na.rm = TRUE)),
-                     by = c("ZoneID")
-                  ],
+              getSubsetByTimeRange(
+                df2,
+                y1,
+                y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
+                    c("BIRTHID", "CSDuid", "ZoneID", "ZnName", "BrthYear", "dlv")
+                ][, `:=` (count_dlv_geo_yr = .N),
+                  by = list(BrthYear, ZoneID, dlv)
+                ][,
+                  c("CSDuid", "ZoneID", "ZnName", "BrthYear", "dlv", "count_dlv_geo_yr")
+                ])[,
+                   `:=` (total_lvb_geo = sum(count_dlv_geo_yr,
+                                             na.rm = TRUE)),
+                   by = c("ZoneID")
+                ],
             by = c("CSDuid", "ZoneID", "ZnName", "BrthYear"),
             allow.cartesian = TRUE,
             all.x = TRUE)[
@@ -1048,28 +972,26 @@ buildGeoDataByCase <- function(df1,
                   q,
                   c("CaseID", "CSDuid", "area", "BrthYear","cat_tier4"),
                   c("area", "BrthYear"))[,
-                                           c("CSDuid", "area", "BrthYear","cat_tier4", "total_cases")
+                                         c("CSDuid", "area", "BrthYear","cat_tier4", "total_cases")
                   ])[,
                      `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                      by = list(area, cat_tier4)
                   ]),
             unique(
-              setDT(
-                getSubsetByTimeRange(
-                  df2,
-                  y1,
-                  y2,
-                  colsToSelect = c("BIRTHID", "CSDuid", "area", "BrthYear", "dlv")
-                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                     ][, `:=` (count_dlv_geo_yr = .N),
-                    by = list(BrthYear, area, dlv)
-                  ][,
-                    c("CSDuid", "area", "BrthYear", "dlv", "count_dlv_geo_yr")
-                  ])[,
-                     `:=` (total_lvb_geo = sum(count_dlv_geo_yr,
-                                               na.rm = TRUE)),
-                     by = c("area")
-                  ],
+              getSubsetByTimeRange(
+                df2,
+                y1,
+                y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
+                    c("BIRTHID", "CSDuid", "area", "BrthYear", "dlv")
+                ][, `:=` (count_dlv_geo_yr = .N),
+                  by = list(BrthYear, area, dlv)
+                ][,
+                  c("CSDuid", "area", "BrthYear", "dlv", "count_dlv_geo_yr")
+                ])[,
+                   `:=` (total_lvb_geo = sum(count_dlv_geo_yr,
+                                             na.rm = TRUE)),
+                   by = c("area")
+                ],
             by = c("CSDuid", "area", "BrthYear"),
             allow.cartesian = TRUE,
             all.x = TRUE)[
@@ -1110,7 +1032,7 @@ buildGeoDataByCaseTime <- function(df1, df2,
                 q = NULL,
                 c("CaseID", "CSDuid", "CSDName", "CSDType", "BrthYear"),
                 c("CSDuid", "BrthYear"))[,
-                    c("CSDuid", "CSDName", "CSDType", "BrthYear", "total_cases")
+                                         c("CSDuid", "CSDName", "CSDType", "BrthYear", "total_cases")
                 ])[,
                    `:=` (total_cases_yr = sum(total_cases,
                                               na.rm = TRUE)),
@@ -1136,7 +1058,7 @@ buildGeoDataByCaseTime <- function(df1, df2,
                       c("CSDuid", "CSDName", "BrthYear", "total_lvb_geo_yr")]
               )[,
                 `:=` (total_lvb_yr = sum(total_lvb_geo_yr,
-                                          na.rm = TRUE)),
+                                         na.rm = TRUE)),
                 by = c("BrthYear")
               ][,
                 c("CSDuid", "CSDName", "BrthYear", "total_lvb_geo_yr", "total_lvb_yr")
@@ -1162,7 +1084,7 @@ buildGeoDataByCaseTime <- function(df1, df2,
                 q = NULL,
                 c("CaseID", "CDuid", "CDName", "BrthYear"),
                 c("CDuid", "BrthYear"))[,
-                    c("CDuid", "CDName", "BrthYear", "total_cases")
+                                        c("CDuid", "CDName", "BrthYear", "total_cases")
                 ])[,
                    `:=` (total_cases_yr = sum(total_cases,
                                               na.rm = TRUE)),
@@ -1190,7 +1112,7 @@ buildGeoDataByCaseTime <- function(df1, df2,
                       c("CDuid", "CDName", "BrthYear", "total_lvb_geo_yr")]
               )[,
                 `:=` (total_lvb_yr = sum(total_lvb_geo_yr,
-                                          na.rm = TRUE)),
+                                         na.rm = TRUE)),
                 by = c("BrthYear")
               ][,
                 c("CDuid", "CDName", "BrthYear", "total_lvb_geo_yr", "total_lvb_yr")
@@ -1216,7 +1138,7 @@ buildGeoDataByCaseTime <- function(df1, df2,
                 q = NULL,
                 c("CaseID", "Cluster_Number", "ClusterName", "BrthYear"),
                 c("Cluster_Number","BrthYear"))[,
-                    c("Cluster_Number", "ClusterName", "BrthYear", "total_cases")
+                                                c("Cluster_Number", "ClusterName", "BrthYear", "total_cases")
                 ])[,
                    `:=` (total_cases_yr = sum(total_cases,
                                               na.rm = TRUE)),
@@ -1244,7 +1166,7 @@ buildGeoDataByCaseTime <- function(df1, df2,
                       c("Cluster_Number", "ClusterName", "BrthYear", "total_lvb_geo_yr")]
               )[,
                 `:=` (total_lvb_yr = sum(total_lvb_geo_yr,
-                                          na.rm = TRUE)),
+                                         na.rm = TRUE)),
                 by = c("BrthYear")
               ][,
                 c("Cluster_Number", "ClusterName", "BrthYear", "total_lvb_yr", "total_lvb_geo_yr")
@@ -1271,7 +1193,7 @@ buildGeoDataByCaseTime <- function(df1, df2,
                 q = NULL,
                 c("CaseID", "NetworkID", "NetworkName", "BrthYear"),
                 c("NetworkID", "BrthYear"))[,
-                    c("NetworkID", "NetworkName", "BrthYear", "total_cases")
+                                            c("NetworkID", "NetworkName", "BrthYear", "total_cases")
                 ])[,
                    `:=` (total_cases_yr = sum(total_cases,
                                               na.rm = TRUE)),
@@ -1297,7 +1219,7 @@ buildGeoDataByCaseTime <- function(df1, df2,
                       c("NetworkID", "NetworkName", "BrthYear", "total_lvb_geo_yr")]
               )[,
                 `:=` (total_lvb_yr = sum(total_lvb_geo_yr,
-                                          na.rm = TRUE)),
+                                         na.rm = TRUE)),
                 by = c("BrthYear")
               ][,
                 c("NetworkID", "NetworkName", "BrthYear", "total_lvb_geo_yr", "total_lvb_yr")
@@ -1323,8 +1245,8 @@ buildGeoDataByCaseTime <- function(df1, df2,
                 q = NULL,
                 c("CaseID", "CSDuid", "ZoneID", "ZnName", "BrthYear"),
                 c("CSDuid", "ZoneID", "BrthYear"))[,
-                      c("CSDuid", "ZoneID", "ZnName",
-                        "BrthYear", "total_cases")
+                                                   c("CSDuid", "ZoneID", "ZnName",
+                                                     "BrthYear", "total_cases")
                 ])[,
                    `:=` (total_cases_yr = sum(total_cases,
                                               na.rm = TRUE)),
@@ -1376,8 +1298,8 @@ buildGeoDataByCaseTime <- function(df1, df2,
                 q = NULL,
                 c("CaseID", "CSDuid", "area", "BrthYear"),
                 c("CSDuid", "area", "BrthYear"))[,
-                      c("CSDuid", "area",
-                      "BrthYear", "total_cases")
+                                                 c("CSDuid", "area",
+                                                   "BrthYear", "total_cases")
                 ])[,
                    `:=` (total_cases_yr = sum(total_cases,
                                               na.rm = TRUE)),
@@ -1432,7 +1354,7 @@ buildGeoDataByCaseTime <- function(df1, df2,
                   q,
                   c("CaseID", "CSDuid", "CSDName", "CSDType", "BrthYear", "cat_tier3"),
                   c("CSDuid", "BrthYear"))[,
-                      c("CSDuid", "CSDName", "BrthYear","cat_tier3", "total_cases")
+                                           c("CSDuid", "CSDName", "BrthYear","cat_tier3", "total_cases")
                   ])[,
                      `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                      by = list(CSDuid, cat_tier3, BrthYear)
@@ -1460,7 +1382,7 @@ buildGeoDataByCaseTime <- function(df1, df2,
                     c("CSDuid", "CSDName", "BrthYear", "total_lvb_geo_yr")
                   ])[,
                      `:=` (total_lvb_yr = sum(total_lvb_geo_yr,
-                                               na.rm = TRUE)),
+                                              na.rm = TRUE)),
                      by = c("BrthYear")
                   ],
             by = c("CSDuid", "CSDName", "BrthYear"),
@@ -1486,7 +1408,7 @@ buildGeoDataByCaseTime <- function(df1, df2,
                   q,
                   c("CaseID", "CDuid", "CDName", "BrthYear","cat_tier3"),
                   c("CDuid", "BrthYear"))[,
-                      c("CDuid", "CDName", "BrthYear","cat_tier3", "total_cases")
+                                          c("CDuid", "CDName", "BrthYear","cat_tier3", "total_cases")
                   ])[,
                      `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                      by = list(CDuid, cat_tier3, BrthYear)
@@ -1514,7 +1436,7 @@ buildGeoDataByCaseTime <- function(df1, df2,
                     c("CDuid", "CDName", "BrthYear", "total_lvb_geo_yr")
                   ])[,
                      `:=` (total_lvb_yr = sum(total_lvb_geo_yr,
-                                               na.rm = TRUE)),
+                                              na.rm = TRUE)),
                      by = c("BrthYear")
                   ],
             by = c("CDuid", "CDName", "BrthYear"),
@@ -1540,7 +1462,7 @@ buildGeoDataByCaseTime <- function(df1, df2,
                   q,
                   c("CaseID", "Cluster_Number", "ClusterName", "BrthYear","cat_tier3"),
                   c("Cluster_Number", "BrthYear"))[,
-                      c("Cluster_Number", "ClusterName", "BrthYear","cat_tier3", "total_cases")
+                                                   c("Cluster_Number", "ClusterName", "BrthYear","cat_tier3", "total_cases")
                   ])[,
                      `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                      by = list(Cluster_Number, cat_tier3, BrthYear)
@@ -1568,7 +1490,7 @@ buildGeoDataByCaseTime <- function(df1, df2,
                     c("Cluster_Number", "ClusterName", "BrthYear", "total_lvb_geo_yr")
                   ])[,
                      `:=` (total_lvb_yr = sum(total_lvb_geo_yr,
-                                               na.rm = TRUE)),
+                                              na.rm = TRUE)),
                      by = c("BrthYear")
                   ],
             by = c("Cluster_Number", "ClusterName", "BrthYear"),
@@ -1594,7 +1516,7 @@ buildGeoDataByCaseTime <- function(df1, df2,
                   q,
                   c("CaseID", "NetworkID", "NetworkName", "BrthYear","cat_tier3"),
                   c("NetworkID", "BrthYear"))[,
-                       c("NetworkID", "NetworkName", "BrthYear","cat_tier3", "total_cases")
+                                              c("NetworkID", "NetworkName", "BrthYear","cat_tier3", "total_cases")
                   ])[,
                      `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                      by = list(NetworkID, cat_tier3, BrthYear)
@@ -1622,7 +1544,7 @@ buildGeoDataByCaseTime <- function(df1, df2,
                     c("NetworkID", "NetworkName", "BrthYear", "total_lvb_geo_yr")
                   ])[,
                      `:=` (total_lvb_yr = sum(total_lvb_geo_yr,
-                                               na.rm = TRUE)),
+                                              na.rm = TRUE)),
                      by = c("BrthYear")
                   ],
             by = c("NetworkID", "NetworkName", "BrthYear"),
@@ -1648,7 +1570,7 @@ buildGeoDataByCaseTime <- function(df1, df2,
                   q,
                   c("CaseID", "CSDuid", "ZoneID", "ZnName", "BrthYear","cat_tier3"),
                   c("CSDuid","ZoneID", "BrthYear"))[,
-                        c("CSDuid", "ZoneID", "ZnName", "BrthYear","cat_tier3", "total_cases")
+                                                    c("CSDuid", "ZoneID", "ZnName", "BrthYear","cat_tier3", "total_cases")
                   ])[,
                      `:=` (total_cases_geo_yr = sum(total_cases, na.rm = TRUE)),
                      by = list(ZoneID, cat_tier3, BrthYear)
@@ -1658,7 +1580,7 @@ buildGeoDataByCaseTime <- function(df1, df2,
                      by = c("BrthYear","cat_tier3")
                   ][,
                     `:=` (total_cases = total_cases_geo_yr)
-                    ],
+                  ],
             unique(
               unique(
                 getSubsetByTimeRange(
@@ -1705,7 +1627,7 @@ buildGeoDataByCaseTime <- function(df1, df2,
                   q,
                   c("CaseID", "CSDuid", "area", "BrthYear","cat_tier3"),
                   c("CSDuid","area", "BrthYear"))[,
-                          c("CSDuid", "area", "BrthYear","cat_tier3", "total_cases")
+                                                  c("CSDuid", "area", "BrthYear","cat_tier3", "total_cases")
                   ])[,
                      `:=` (total_cases_geo_yr = sum(total_cases, na.rm = TRUE)),
                      by = list(area, cat_tier3, BrthYear)
@@ -1980,7 +1902,7 @@ buildGeoDataByCaseTime <- function(df1, df2,
                   q,
                   c("CaseID", "CSDuid", "ZoneID", "ZnName", "BrthYear","cat_tier4"),
                   c("CSDuid","ZoneID", "BrthYear"))[,
-                       c("CSDuid", "ZoneID", "ZnName", "BrthYear","cat_tier4", "total_cases")
+                                                    c("CSDuid", "ZoneID", "ZnName", "BrthYear","cat_tier4", "total_cases")
                   ])[,
                      `:=` (total_cases_geo_yr = sum(total_cases, na.rm = TRUE)),
                      by = list(ZoneID, cat_tier4, BrthYear)
@@ -2107,7 +2029,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                   q = NULL,
                   c("CaseID", "CSDuid", "CSDName", "CSDType", "BrthYear"),
                   c("CSDuid", "BrthYear"))[,
-                      c("CSDuid", "CSDName", "CSDType", "BrthYear", "total_cases")
+                                           c("CSDuid", "CSDName", "CSDType", "BrthYear", "total_cases")
                   ])[,
                      `:=` (total_cases_yr = sum(total_cases,
                                                 na.rm = TRUE),
@@ -2115,9 +2037,9 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                      by = c("BrthYear")
                   ][,
                     `:=` (total_cases_geo = sum(total_cases_geo_yr,
-                                               na.rm = TRUE)),
+                                                na.rm = TRUE)),
                     by = c("CSDuid")
-                    ],
+                  ],
               unique(
                 unique(
                   unique(
@@ -2142,7 +2064,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                   by = c("BrthYear")
                 ][,
                   `:=` (total_lvb_geo = sum(total_lvb_geo_yr,
-                                           na.rm = TRUE)),
+                                            na.rm = TRUE)),
                   by = c("CSDuid")
                 ][,
                   c("CSDuid", "CSDName", "BrthYear", "total_lvb_geo_yr",
@@ -2177,7 +2099,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                   q = NULL,
                   c("CaseID", "CDuid", "CDName", "BrthYear"),
                   c("CDuid", "BrthYear"))[,
-                      c("CDuid", "CDName", "BrthYear", "total_cases")
+                                          c("CDuid", "CDName", "BrthYear", "total_cases")
                   ])[,
                      `:=` (total_cases_yr = sum(total_cases,
                                                 na.rm = TRUE),
@@ -2185,7 +2107,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                      by = c("BrthYear")
                   ][,
                     `:=` (total_cases_geo = sum(total_cases_geo_yr,
-                                               na.rm = TRUE)),
+                                                na.rm = TRUE)),
                     by = c("CDuid")
                   ],
               unique(
@@ -2248,7 +2170,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                   q = NULL,
                   c("CaseID", "Cluster_Number", "ClusterName", "BrthYear"),
                   c("Cluster_Number","BrthYear"))[,
-                      c("Cluster_Number", "ClusterName", "BrthYear", "total_cases")
+                                                  c("Cluster_Number", "ClusterName", "BrthYear", "total_cases")
                   ])[,
                      `:=` (total_cases_yr = sum(total_cases,
                                                 na.rm = TRUE),
@@ -2256,7 +2178,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                      by = c("BrthYear")
                   ][,
                     `:=` (total_cases_geo = sum(total_cases_geo_yr,
-                                              na.rm = TRUE)),
+                                                na.rm = TRUE)),
                     by = c("Cluster_Number")
                   ],
               unique(
@@ -2320,7 +2242,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                   q = NULL,
                   c("CaseID", "NetworkID", "NetworkName", "BrthYear"),
                   c("NetworkID", "BrthYear"))[,
-                      c("NetworkID", "NetworkName", "BrthYear", "total_cases")
+                                              c("NetworkID", "NetworkName", "BrthYear", "total_cases")
                   ])[,
                      `:=` (total_cases_yr = sum(total_cases,
                                                 na.rm = TRUE),
@@ -2328,7 +2250,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                      by = c("BrthYear")
                   ][,
                     `:=` (total_cases_geo = sum(total_cases_geo_yr,
-                                              na.rm = TRUE)),
+                                                na.rm = TRUE)),
                     by = c("NetworkID")
                   ],
               unique(
@@ -2390,7 +2312,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                   q = NULL,
                   c("CaseID", "CSDuid", "ZoneID", "ZnName", "BrthYear"),
                   c("CSDuid", "ZoneID", "BrthYear"))[,
-                      c("CSDuid", "ZoneID", "ZnName", "BrthYear", "total_cases")
+                                                     c("CSDuid", "ZoneID", "ZnName", "BrthYear", "total_cases")
                   ])[,
                      `:=` (total_cases_yr = sum(total_cases,
                                                 na.rm = TRUE),
@@ -2460,7 +2382,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                   q = NULL,
                   c("CaseID", "CSDuid", "area", "BrthYear"),
                   c("CSDuid", "area", "BrthYear"))[,
-                       c("CSDuid", "area", "BrthYear", "total_cases")
+                                                   c("CSDuid", "area", "BrthYear", "total_cases")
                   ])[,
                      `:=` (total_cases_yr = sum(total_cases,
                                                 na.rm = TRUE),
@@ -2533,7 +2455,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     q,
                     c("CaseID", "CSDuid", "CSDName", "CSDType", "BrthYear", "cat_tier3"),
                     c("CSDuid", "BrthYear"))[,
-                        c("CSDuid", "CSDName", "BrthYear","cat_tier3", "total_cases")
+                                             c("CSDuid", "CSDName", "BrthYear","cat_tier3", "total_cases")
                     ])[,
                        `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                        by = list(CSDuid, cat_tier3, BrthYear)
@@ -2570,7 +2492,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                        by = c("BrthYear")
                     ][,
                       `:=` (total_lvb_geo = sum(total_lvb_geo_yr,
-                                                  na.rm = TRUE)),
+                                                na.rm = TRUE)),
                       by = c("CSDuid")
                     ],
               by = c("CSDuid", "CSDName", "BrthYear"),
@@ -2603,7 +2525,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     q,
                     c("CaseID", "CDuid", "CDName", "BrthYear","cat_tier3"),
                     c("CDuid", "BrthYear"))[,
-                        c("CDuid", "CDName", "BrthYear","cat_tier3", "total_cases")
+                                            c("CDuid", "CDName", "BrthYear","cat_tier3", "total_cases")
                     ])[,
                        `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                        by = list(CDuid, cat_tier3, BrthYear)
@@ -2614,7 +2536,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                        by = c("BrthYear","cat_tier3")
                     ][,
                       `:=` (total_cases_geo = sum(total_cases_geo_yr,
-                                                na.rm = TRUE)),
+                                                  na.rm = TRUE)),
                       by = c("CDuid","cat_tier3")
                     ],
               unique(
@@ -2640,7 +2562,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                        by = c("BrthYear")
                     ][,
                       `:=` (total_lvb_geo = sum(total_lvb_geo_yr,
-                                               na.rm = TRUE)),
+                                                na.rm = TRUE)),
                       by = c("CDuid")
                     ],
               by = c("CDuid", "CDName", "BrthYear"),
@@ -2673,7 +2595,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     q,
                     c("CaseID", "Cluster_Number", "ClusterName", "BrthYear","cat_tier3"),
                     c("Cluster_Number", "BrthYear"))[,
-                        c("Cluster_Number", "ClusterName", "BrthYear","cat_tier3", "total_cases")
+                                                     c("Cluster_Number", "ClusterName", "BrthYear","cat_tier3", "total_cases")
                     ])[,
                        `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                        by = list(Cluster_Number, cat_tier3, BrthYear)
@@ -2684,7 +2606,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                        by = c("BrthYear","cat_tier3")
                     ][,
                       `:=` (total_cases_geo = sum(total_cases_geo_yr,
-                                               na.rm = TRUE)),
+                                                  na.rm = TRUE)),
                       by = c("Cluster_Number","cat_tier3")
                     ],
               unique(
@@ -2710,7 +2632,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                        by = c("BrthYear")
                     ][,
                       `:=` (total_lvb_geo = sum(total_lvb_geo_yr,
-                                               na.rm = TRUE)),
+                                                na.rm = TRUE)),
                       by = c("Cluster_Number")
                     ],
               by = c("Cluster_Number", "ClusterName", "BrthYear"),
@@ -2743,7 +2665,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     q,
                     c("CaseID", "NetworkID", "NetworkName", "BrthYear","cat_tier3"),
                     c("NetworkID", "BrthYear"))[,
-                        c("NetworkID", "NetworkName", "BrthYear","cat_tier3", "total_cases")
+                                                c("NetworkID", "NetworkName", "BrthYear","cat_tier3", "total_cases")
                     ])[,
                        `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                        by = list(NetworkID, cat_tier3, BrthYear)
@@ -2754,7 +2676,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                        by = c("BrthYear","cat_tier3")
                     ][,
                       `:=` (total_cases_geo = sum(total_cases_geo_yr,
-                                               na.rm = TRUE)),
+                                                  na.rm = TRUE)),
                       by = c("NetworkID","cat_tier3")
                     ],
               unique(
@@ -2780,7 +2702,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                        by = c("BrthYear")
                     ][,
                       `:=` (total_lvb_geo = sum(total_lvb_geo_yr,
-                                               na.rm = TRUE)),
+                                                na.rm = TRUE)),
                       by = c("NetworkID")
                     ],
               by = c("NetworkID", "NetworkName", "BrthYear"),
@@ -2813,14 +2735,14 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     q,
                     c("CaseID", "CSDuid", "ZoneID", "ZnName", "BrthYear","cat_tier3"),
                     c("CSDuid", "ZoneID", "BrthYear"))[,
-                         c("CSDuid", "ZoneID", "ZnName", "BrthYear","cat_tier3", "total_cases")
+                                                       c("CSDuid", "ZoneID", "ZnName", "BrthYear","cat_tier3", "total_cases")
                     ])[,
                        `:=` (total_cases_geo_yr = sum(total_cases, na.rm = TRUE)),
                        by = list(ZoneID, cat_tier3, BrthYear)
                     ])[,
                        `:=` (total_cases_yr = sum(total_cases,
                                                   na.rm = TRUE)
-                             ),
+                       ),
                        by = c("BrthYear","cat_tier3")
                     ][,
                       `:=` (total_cases_geo = sum(total_cases,
@@ -2883,7 +2805,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     q,
                     c("CaseID", "CSDuid", "area", "BrthYear","cat_tier3"),
                     c("CSDuid", "area", "BrthYear"))[,
-                            c("CSDuid", "area", "BrthYear","cat_tier3", "total_cases")
+                                                     c("CSDuid", "area", "BrthYear","cat_tier3", "total_cases")
                     ])[,
                        `:=` (total_cases_geo_yr = sum(total_cases, na.rm = TRUE)),
                        by = list(area, cat_tier3, BrthYear)
@@ -2954,7 +2876,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     q,
                     c("CaseID", "CSDuid", "CSDName", "CSDType", "BrthYear", "cat_tier4"),
                     c("CSDuid", "BrthYear"))[,
-                        c("CSDuid", "CSDName", "BrthYear","cat_tier4", "total_cases")
+                                             c("CSDuid", "CSDName", "BrthYear","cat_tier4", "total_cases")
                     ])[,
                        `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                        by = list(CSDuid, cat_tier4, BrthYear)
@@ -2965,7 +2887,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                        by = c("BrthYear","cat_tier4")
                     ][,
                       `:=` (total_cases_geo = sum(total_cases_geo_yr,
-                                                 na.rm = TRUE)),
+                                                  na.rm = TRUE)),
                       by = c("CSDuid","cat_tier4")
                     ],
               unique(
@@ -2991,7 +2913,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                        by = c("BrthYear")
                     ][,
                       `:=` (total_lvb_geo = sum(total_lvb_geo_yr,
-                                                  na.rm = TRUE)),
+                                                na.rm = TRUE)),
                       by = c("CSDuid")
                     ],
               by = c("CSDuid", "CSDName", "BrthYear"),
@@ -3024,7 +2946,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     q,
                     c("CaseID", "CDuid", "CDName", "BrthYear","cat_tier4"),
                     c("CDuid", "BrthYear"))[,
-                        c("CDuid", "CDName", "BrthYear","cat_tier4", "total_cases")
+                                            c("CDuid", "CDName", "BrthYear","cat_tier4", "total_cases")
                     ])[,
                        `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                        by = list(CDuid, cat_tier4, BrthYear)
@@ -3061,7 +2983,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                        by = c("BrthYear")
                     ][,
                       `:=` (total_lvb_geo = sum(total_lvb_geo_yr,
-                                                  na.rm = TRUE)),
+                                                na.rm = TRUE)),
                       by = c("CDuid")
                     ],
               by = c("CDuid", "CDName", "BrthYear"),
@@ -3094,7 +3016,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     q,
                     c("CaseID", "Cluster_Number", "ClusterName", "BrthYear","cat_tier4"),
                     c("Cluster_Number", "BrthYear"))[,
-                        c("Cluster_Number", "ClusterName", "BrthYear","cat_tier4", "total_cases")
+                                                     c("Cluster_Number", "ClusterName", "BrthYear","cat_tier4", "total_cases")
                     ])[,
                        `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                        by = list(Cluster_Number, cat_tier4, BrthYear)
@@ -3131,7 +3053,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                        by = c("BrthYear")
                     ][,
                       `:=` (total_lvb_geo = sum(total_lvb_geo_yr,
-                                                  na.rm = TRUE)),
+                                                na.rm = TRUE)),
                       by = c("Cluster_Number")
                     ],
               by = c("Cluster_Number", "ClusterName", "BrthYear"),
@@ -3164,7 +3086,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     q,
                     c("CaseID", "NetworkID", "NetworkName", "BrthYear","cat_tier4"),
                     c("NetworkID", "BrthYear"))[,
-                        c("NetworkID", "NetworkName", "BrthYear","cat_tier4", "total_cases")
+                                                c("NetworkID", "NetworkName", "BrthYear","cat_tier4", "total_cases")
                     ])[,
                        `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                        by = list(NetworkID, cat_tier4, BrthYear)
@@ -3201,7 +3123,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                        by = c("BrthYear")
                     ][,
                       `:=` (total_lvb_geo = sum(total_lvb_geo_yr,
-                                                  na.rm = TRUE)),
+                                                na.rm = TRUE)),
                       by = c("NetworkID")
                     ],
               by = c("NetworkID", "NetworkName", "BrthYear"),
@@ -3234,7 +3156,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     q,
                     c("CaseID", "CSDuid", "ZoneID", "ZnName", "BrthYear","cat_tier4"),
                     c("CSDuid", "ZoneID", "BrthYear"))[,
-                         c("CSDuid", "ZoneID", "ZnName", "BrthYear","cat_tier4", "total_cases")
+                                                       c("CSDuid", "ZoneID", "ZnName", "BrthYear","cat_tier4", "total_cases")
                     ])[,
                        `:=` (total_cases_geo_yr = sum(total_cases, na.rm = TRUE)),
                        by = list(ZoneID, cat_tier4, BrthYear)
@@ -3304,7 +3226,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     q,
                     c("CaseID", "CSDuid", "area", "BrthYear","cat_tier4"),
                     c("CSDuid", "area", "BrthYear"))[,
-                        c("CSDuid", "area", "BrthYear","cat_tier4", "total_cases")
+                                                     c("CSDuid", "area", "BrthYear","cat_tier4", "total_cases")
                     ])[,
                        `:=` (total_cases_geo_yr = sum(total_cases, na.rm = TRUE)),
                        by = list(area, cat_tier4, BrthYear)
@@ -3375,17 +3297,17 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                   q = NULL,
                   c("CaseID", "CSDuid", "CSDName", "CSDType", "BrthYear", risk),
                   c("CSDuid", "BrthYear", risk))[,
-                      .SD,
-                      .SDcols = c("CSDuid", "CSDName", "CSDType",
-                                  "BrthYear", risk, "total_cases")
+                                                 .SD,
+                                                 .SDcols = c("CSDuid", "CSDName", "CSDType",
+                                                             "BrthYear", risk, "total_cases")
                   ])[,
                      `:=` (total_cases_yr_risk = sum(total_cases,
-                                                na.rm = TRUE),
+                                                     na.rm = TRUE),
                            total_cases_geo_yr_risk = total_cases),
                      by = c("BrthYear", risk)
                   ][,
                     `:=` (total_cases_geo_risk = sum(total_cases_geo_yr_risk,
-                                                na.rm = TRUE)),
+                                                     na.rm = TRUE)),
                     by = c("CSDuid", risk)
                   ],
               unique(
@@ -3406,19 +3328,19 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                                     "dlv", risk, "count_dlv_geo_yr_risk")
                       ])[,
                          `:=` (total_lvb_geo_yr_risk = sum(count_dlv_geo_yr_risk,
-                                                      na.rm = TRUE)),
+                                                           na.rm = TRUE)),
                          by = c("CSDuid","BrthYear", risk)
                       ][,
                         .SD,
                         .SDcols = c("CSDuid", "CSDName", "BrthYear", risk,
-                          "total_lvb_geo_yr_risk")]
+                                    "total_lvb_geo_yr_risk")]
                 )[,
                   `:=` (total_lvb_yr_risk = sum(total_lvb_geo_yr_risk,
-                                           na.rm = TRUE)),
+                                                na.rm = TRUE)),
                   by = c("BrthYear", risk)
                 ][,
                   `:=` (total_lvb_geo_risk = sum(total_lvb_geo_yr_risk,
-                                                   na.rm = TRUE)),
+                                                 na.rm = TRUE)),
                   by = c("CSDuid", risk)
                 ][,
                   .SD,
@@ -3431,8 +3353,8 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                 !is.na(CSDName),
                 .SD,
                 .SDcols = c("CSDuid", "CSDName", "BrthYear", risk,
-                  "total_cases_geo_yr_risk", "total_cases_yr_risk", "total_cases_geo_risk",
-                  "total_lvb_geo_yr_risk", "total_lvb_yr_risk", "total_lvb_geo_risk")
+                            "total_cases_geo_yr_risk", "total_cases_yr_risk", "total_cases_geo_risk",
+                            "total_lvb_geo_yr_risk", "total_lvb_yr_risk", "total_lvb_geo_risk")
               ])[,
                  `:=` (rate = 1000*total_cases_geo_yr_risk/total_lvb_geo_yr_risk),
                  by = c("CSDuid")
@@ -3455,12 +3377,12 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                   q = NULL,
                   c("CaseID", "CDuid", "CDName", "BrthYear", risk),
                   c("CDuid", "BrthYear", risk))[,
-                      .SD,
-                      .SDcols = c("CDuid", "CDName", "BrthYear",
-                                  risk, "total_cases")
+                                                .SD,
+                                                .SDcols = c("CDuid", "CDName", "BrthYear",
+                                                            risk, "total_cases")
                   ])[,
                      `:=` (total_cases_yr_risk = sum(total_cases,
-                                                na.rm = TRUE),
+                                                     na.rm = TRUE),
                            total_cases_geo_yr_risk = total_cases),
                      by = c("BrthYear", risk)
                   ][,
@@ -3486,7 +3408,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                                     risk, "dlv", "count_dlv_geo_yr_risk")
                       ])[,
                          `:=` (total_lvb_geo_yr_risk = sum(count_dlv_geo_yr_risk,
-                                                      na.rm = TRUE)),
+                                                           na.rm = TRUE)),
                          by = c("CDuid","BrthYear", risk)
                       ][,
                         .SD,
@@ -3494,11 +3416,11 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                                     risk, "total_lvb_geo_yr_risk")]
                 )[,
                   `:=` (total_lvb_yr_risk = sum(total_lvb_geo_yr_risk,
-                                           na.rm = TRUE)),
+                                                na.rm = TRUE)),
                   by = c("BrthYear", risk)
                 ][,
                   `:=` (total_lvb_geo_risk = sum(total_lvb_geo_yr_risk,
-                                                   na.rm = TRUE)),
+                                                 na.rm = TRUE)),
                   by = c("CDuid", risk)
                 ][,
                   .SD,
@@ -3535,11 +3457,11 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                   q = NULL,
                   c("CaseID", "Cluster_Number", "ClusterName", "BrthYear", risk),
                   c("Cluster_Number","BrthYear", risk))[,
-                      .SD,
-                      .SDcols = c("Cluster_Number", "ClusterName", "BrthYear", risk, "total_cases")
+                                                        .SD,
+                                                        .SDcols = c("Cluster_Number", "ClusterName", "BrthYear", risk, "total_cases")
                   ])[,
                      `:=` (total_cases_yr_risk = sum(total_cases,
-                                                na.rm = TRUE),
+                                                     na.rm = TRUE),
                            total_cases_geo_yr_risk = total_cases),
                      by = c("BrthYear", risk)
                   ][,
@@ -3565,7 +3487,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                                     risk, "dlv", "count_dlv_geo_yr_risk")
                       ])[,
                          `:=` (total_lvb_geo_yr_risk = sum(count_dlv_geo_yr_risk,
-                                                      na.rm = TRUE)),
+                                                           na.rm = TRUE)),
                          by = c("Cluster_Number","BrthYear", risk)
                       ][,
                         .SD,
@@ -3573,11 +3495,11 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                                     risk, "total_lvb_geo_yr_risk")]
                 )[,
                   `:=` (total_lvb_yr_risk = sum(total_lvb_geo_yr_risk,
-                                           na.rm = TRUE)),
+                                                na.rm = TRUE)),
                   by = c("BrthYear", risk)
                 ][,
                   `:=` (total_lvb_geo_risk = sum(total_lvb_geo_yr_risk,
-                                                   na.rm = TRUE)),
+                                                 na.rm = TRUE)),
                   by = c("Cluster_Number", risk)
                 ][,
                   .SD,
@@ -3590,8 +3512,8 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                 !is.na(ClusterName), 
                 .SD,
                 .SDcols = c("Cluster_Number", "ClusterName", "BrthYear", risk,
-                  "total_cases_geo_yr_risk", "total_cases_yr_risk","total_cases_geo_risk",
-                  "total_lvb_geo_yr_risk", "total_lvb_yr_risk","total_lvb_geo_risk")
+                            "total_cases_geo_yr_risk", "total_cases_yr_risk","total_cases_geo_risk",
+                            "total_lvb_geo_yr_risk", "total_lvb_yr_risk","total_lvb_geo_risk")
               ])[,
                  `:=` (rate = 1000*total_cases_geo_yr_risk/total_lvb_geo_yr_risk),
                  by = c("Cluster_Number")
@@ -3614,12 +3536,12 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                   q = NULL,
                   c("CaseID", "NetworkID", "NetworkName", "BrthYear", risk),
                   c("NetworkID", "BrthYear", risk))[,
-                      .SD,
-                      .SDcols = c("NetworkID", "NetworkName", "BrthYear",
-                                  risk, "total_cases")
+                                                    .SD,
+                                                    .SDcols = c("NetworkID", "NetworkName", "BrthYear",
+                                                                risk, "total_cases")
                   ])[,
                      `:=` (total_cases_yr_risk = sum(total_cases,
-                                                na.rm = TRUE),
+                                                     na.rm = TRUE),
                            total_cases_geo_yr_risk = total_cases),
                      by = c("BrthYear", risk)
                   ][,
@@ -3645,7 +3567,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                                     risk, "dlv", "count_dlv_geo_yr_risk")
                       ])[,
                          `:=` (total_lvb_geo_yr_risk = sum(count_dlv_geo_yr_risk,
-                                                      na.rm = TRUE)),
+                                                           na.rm = TRUE)),
                          by = c("NetworkID","BrthYear", risk)
                       ][,
                         .SD,
@@ -3653,11 +3575,11 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                                     "total_lvb_geo_yr_risk")]
                 )[,
                   `:=` (total_lvb_yr_risk = sum(total_lvb_geo_yr_risk,
-                                           na.rm = TRUE)),
+                                                na.rm = TRUE)),
                   by = c("BrthYear", risk)
                 ][,
                   `:=` (total_lvb_geo_risk = sum(total_lvb_geo_yr_risk,
-                                                   na.rm = TRUE)),
+                                                 na.rm = TRUE)),
                   by = c("NetworkID", risk)
                 ][,
                   .SD,
@@ -3670,8 +3592,8 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                 !is.na(NetworkName),
                 .SD,
                 .SDcols = c("NetworkID", "NetworkName", "BrthYear", risk,
-                  "total_cases_geo_yr_risk","total_cases_yr_risk","total_cases_geo_risk",
-                  "total_lvb_geo_yr_risk", "total_lvb_yr_risk", "total_lvb_geo_risk")
+                            "total_cases_geo_yr_risk","total_cases_yr_risk","total_cases_geo_risk",
+                            "total_lvb_geo_yr_risk", "total_lvb_yr_risk", "total_lvb_geo_risk")
               ])[,
                  `:=` (rate = 1000*total_cases_geo_yr_risk/total_lvb_geo_yr_risk),
                  by = c("NetworkID")
@@ -3694,18 +3616,18 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                   q = NULL,
                   c("CaseID", "CSDuid", "ZoneID", "ZnName", "BrthYear", risk),
                   c("CSDuid", "ZoneID", "BrthYear", risk))[,
-                                                    .SD,
-                                                    .SDcols = c("CSDuid", "ZoneID", "ZnName", "BrthYear",
-                                                                risk, "total_cases")
+                                                           .SD,
+                                                           .SDcols = c("CSDuid", "ZoneID", "ZnName", "BrthYear",
+                                                                       risk, "total_cases")
                   ])[,
                      `:=` (
                        total_cases_geo_yr_risk = sum(total_cases,
                                                      na.rm = TRUE)),
                      by = c("ZoneID", "BrthYear", risk)
-                     ][,
-                     `:=` (total_cases_yr_risk = sum(total_cases,
-                                                     na.rm = TRUE)),
-                     by = c("BrthYear", risk)
+                  ][,
+                    `:=` (total_cases_yr_risk = sum(total_cases,
+                                                    na.rm = TRUE)),
+                    by = c("BrthYear", risk)
                   ][,
                     `:=` (total_cases_geo_risk = sum(total_cases,
                                                      na.rm = TRUE)),
@@ -3778,9 +3700,9 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                   q = NULL,
                   c("CaseID", "CSDuid", "area", "BrthYear", risk),
                   c("CSDuid", "area", "BrthYear", risk))[,
-                        .SD,
-                        .SDcols = c("CSDuid", "area", "BrthYear",
-                        risk, "total_cases")
+                                                         .SD,
+                                                         .SDcols = c("CSDuid", "area", "BrthYear",
+                                                                     risk, "total_cases")
                   ])[,
                      `:=` (
                        total_cases_geo_yr_risk = sum(total_cases,
@@ -3866,15 +3788,15 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     c("CaseID", "CSDuid", "CSDName", "CSDType",
                       "BrthYear", "cat_tier3", risk),
                     c("CSDuid", "BrthYear", risk))[,
-                        .SD,
-                        .SDcols = c("CSDuid", "CSDName", "BrthYear",
-                                    "cat_tier3", risk, "total_cases")
+                                                   .SD,
+                                                   .SDcols = c("CSDuid", "CSDName", "BrthYear",
+                                                               "cat_tier3", risk, "total_cases")
                     ])[,
                        `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                        by = list(CSDuid, cat_tier3, BrthYear)
                     ])[,
                        `:=` (total_cases_yr_risk = sum(total_cases,
-                                                  na.rm = TRUE),
+                                                       na.rm = TRUE),
                              total_cases_geo_yr_risk = total_cases),
                        by = c("BrthYear","cat_tier3", risk)
                     ][,
@@ -3885,44 +3807,44 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
               unique(
                 unique(
                   unique(
-                  getSubsetByTimeRange(
-                    df2,
-                    y1,
-                    y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
+                    getSubsetByTimeRange(
+                      df2,
+                      y1,
+                      y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
+                          .SD,
+                          .SDcols = c("BIRTHID", "CSDuid", "CSDName",
+                                      "BrthYear", risk, "dlv")
+                      ][, `:=` (count_dlv_geo_yr_risk = .N),
+                        by = list(BrthYear, CSDuid, dlv, get(risk))
+                      ][,
                         .SD,
-                        .SDcols = c("BIRTHID", "CSDuid", "CSDName",
-                                    "BrthYear", risk, "dlv")
-                    ][, `:=` (count_dlv_geo_yr_risk = .N),
-                      by = list(BrthYear, CSDuid, dlv, get(risk))
-                    ][,
-                      .SD,
-                      .SDcols = c("CSDuid", "CSDName", "BrthYear",
-                                  risk, "dlv", "count_dlv_geo_yr_risk")
-                    ])[,
-                       `:=` (total_lvb_geo_yr_risk = sum(count_dlv_geo_yr_risk,
-                                                    na.rm = TRUE)),
-                       by = c("CSDuid","BrthYear", risk)
-                    ][,
-                      .SD,
-                      .SDcols = c("CSDuid", "CSDName", "BrthYear", risk,
-                                  "total_lvb_geo_yr_risk")
-                    ])[,
-                       `:=` (total_lvb_yr_risk = sum(total_lvb_geo_yr_risk,
-                                                na.rm = TRUE)),
-                       by = c("BrthYear", risk)
-                    ][,
-                      `:=` (total_lvb_geo_risk = sum(total_lvb_geo_yr_risk,
+                        .SDcols = c("CSDuid", "CSDName", "BrthYear",
+                                    risk, "dlv", "count_dlv_geo_yr_risk")
+                      ])[,
+                         `:=` (total_lvb_geo_yr_risk = sum(count_dlv_geo_yr_risk,
+                                                           na.rm = TRUE)),
+                         by = c("CSDuid","BrthYear", risk)
+                      ][,
+                        .SD,
+                        .SDcols = c("CSDuid", "CSDName", "BrthYear", risk,
+                                    "total_lvb_geo_yr_risk")
+                      ])[,
+                         `:=` (total_lvb_yr_risk = sum(total_lvb_geo_yr_risk,
                                                        na.rm = TRUE)),
-                      by = c("CSDuid", risk)
-                    ]),
+                         by = c("BrthYear", risk)
+                      ][,
+                        `:=` (total_lvb_geo_risk = sum(total_lvb_geo_yr_risk,
+                                                       na.rm = TRUE)),
+                        by = c("CSDuid", risk)
+                      ]),
               by = c("CSDuid", "CSDName", "BrthYear", risk),
               allow.cartesian = TRUE,
               all.x = TRUE)[
                 !is.na(CSDName),
                 .SD,
                 .SDcols = c("CSDuid", "CSDName", "BrthYear", "cat_tier3", risk,
-                  "total_cases_geo_yr_risk", "total_cases_yr_risk","total_cases_geo_risk",
-                  "total_lvb_geo_yr_risk","total_lvb_yr_risk","total_lvb_geo_risk")
+                            "total_cases_geo_yr_risk", "total_cases_yr_risk","total_cases_geo_risk",
+                            "total_lvb_geo_yr_risk","total_lvb_yr_risk","total_lvb_geo_risk")
               ])[,
                  `:=` (rate = 1000*total_cases_geo_yr_risk/total_lvb_geo_yr_risk),
                  by = c("CSDuid")
@@ -3946,15 +3868,15 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     q,
                     c("CaseID", "CDuid", "CDName", "BrthYear","cat_tier3", risk),
                     c("CDuid", "BrthYear", risk))[,
-                        .SD,
-                        .SDcols = c("CDuid", "CDName", "BrthYear","cat_tier3",
-                                    risk, "total_cases")
+                                                  .SD,
+                                                  .SDcols = c("CDuid", "CDName", "BrthYear","cat_tier3",
+                                                              risk, "total_cases")
                     ])[,
                        `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                        by = list(CDuid, cat_tier3, BrthYear, get(risk))
                     ])[,
                        `:=` (total_cases_yr_risk = sum(total_cases,
-                                                  na.rm = TRUE),
+                                                       na.rm = TRUE),
                              total_cases_geo_yr_risk = total_cases),
                        by = c("BrthYear","cat_tier3", risk)
                     ][,
@@ -3976,10 +3898,10 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     ][,
                       .SD,
                       .SDcols = c("CDuid", "CDName", "BrthYear", risk, 
-                        "dlv", "count_dlv_geo_yr_risk")
+                                  "dlv", "count_dlv_geo_yr_risk")
                     ])[,
                        `:=` (total_lvb_geo_yr_risk = sum(count_dlv_geo_yr_risk,
-                                                    na.rm = TRUE)),
+                                                         na.rm = TRUE)),
                        by = c("CDuid","BrthYear", risk)
                     ][,
                       .SD,
@@ -3987,11 +3909,11 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                                   "total_lvb_geo_yr_risk")
                     ])[,
                        `:=` (total_lvb_yr_risk = sum(total_lvb_geo_yr_risk,
-                                                na.rm = TRUE)),
+                                                     na.rm = TRUE)),
                        by = c("BrthYear", risk)
                     ][,
                       `:=` (total_lvb_geo_risk = sum(total_lvb_geo_yr_risk,
-                                                       na.rm = TRUE)),
+                                                     na.rm = TRUE)),
                       by = c("CDuid", risk)
                     ],
               by = c("CDuid", "CDName", "BrthYear", risk),
@@ -4000,8 +3922,8 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                 !is.na(CDName),
                 .SD,
                 .SDcols = c("CDuid", "CDName", "BrthYear", "cat_tier3", risk,
-                  "total_cases_geo_yr_risk", "total_cases_yr_risk","total_cases_geo_risk",
-                  "total_lvb_geo_yr_risk","total_lvb_yr_risk","total_lvb_geo_risk")
+                            "total_cases_geo_yr_risk", "total_cases_yr_risk","total_cases_geo_risk",
+                            "total_lvb_geo_yr_risk","total_lvb_yr_risk","total_lvb_geo_risk")
               ])[,
                  `:=` (rate = 1000*total_cases_geo_yr_risk/total_lvb_geo_yr_risk),
                  by = c("CDuid")
@@ -4026,15 +3948,15 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     c("CaseID", "Cluster_Number", "ClusterName",
                       "BrthYear","cat_tier3", risk),
                     c("Cluster_Number", "BrthYear", risk))[,
-                        .SD,
-                        .SDcols = c("Cluster_Number", "ClusterName", "BrthYear", "cat_tier3",
-                                    risk, "total_cases")
+                                                           .SD,
+                                                           .SDcols = c("Cluster_Number", "ClusterName", "BrthYear", "cat_tier3",
+                                                                       risk, "total_cases")
                     ])[,
                        `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                        by = list(Cluster_Number, cat_tier3, BrthYear, get(risk))
                     ])[,
                        `:=` (total_cases_yr_risk = sum(total_cases,
-                                                  na.rm = TRUE),
+                                                       na.rm = TRUE),
                              total_cases_geo_yr_risk = total_cases),
                        by = c("BrthYear","cat_tier3", risk)
                     ][,
@@ -4059,7 +3981,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                                   "count_dlv_geo_yr_risk")
                     ])[,
                        `:=` (total_lvb_geo_yr_risk = sum(count_dlv_geo_yr_risk,
-                                                    na.rm = TRUE)),
+                                                         na.rm = TRUE)),
                        by = c("Cluster_Number","BrthYear", risk)
                     ][,
                       .SD,
@@ -4067,11 +3989,11 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                                   risk, "total_lvb_geo_yr_risk")
                     ])[,
                        `:=` (total_lvb_yr_risk = sum(total_lvb_geo_yr_risk,
-                                                na.rm = TRUE)),
+                                                     na.rm = TRUE)),
                        by = c("BrthYear", risk)
                     ][,
                       `:=` (total_lvb_geo_risk = sum(total_lvb_geo_yr_risk,
-                                                       na.rm = TRUE)),
+                                                     na.rm = TRUE)),
                       by = c("Cluster_Number", risk)
                     ],
               by = c("Cluster_Number", "ClusterName", "BrthYear", risk),
@@ -4080,8 +4002,8 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                 !is.na(ClusterName),
                 .SD,
                 .SDcols = c("Cluster_Number", "ClusterName", "BrthYear", "cat_tier3", risk,
-                  "total_cases_geo_yr_risk", "total_cases_yr_risk","total_cases_geo_risk",
-                  "total_lvb_geo_yr_risk","total_lvb_yr_risk","total_lvb_geo_risk")
+                            "total_cases_geo_yr_risk", "total_cases_yr_risk","total_cases_geo_risk",
+                            "total_lvb_geo_yr_risk","total_lvb_yr_risk","total_lvb_geo_risk")
               ])[,
                  `:=` (rate = 1000*total_cases_geo_yr_risk/total_lvb_geo_yr_risk),
                  by = c("Cluster_Number")
@@ -4106,15 +4028,15 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     c("CaseID", "NetworkID", "NetworkName", "BrthYear",
                       "cat_tier3", risk),
                     c("NetworkID", "BrthYear", risk))[,
-                        .SD,
-                        .SDcols = c("NetworkID", "NetworkName", "BrthYear",
-                                    "cat_tier3", risk, "total_cases")
+                                                      .SD,
+                                                      .SDcols = c("NetworkID", "NetworkName", "BrthYear",
+                                                                  "cat_tier3", risk, "total_cases")
                     ])[,
                        `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                        by = list(NetworkID, cat_tier3, BrthYear, get(risk))
                     ])[,
                        `:=` (total_cases_yr_risk = sum(total_cases,
-                                                  na.rm = TRUE),
+                                                       na.rm = TRUE),
                              total_cases_geo_yr_risk = total_cases),
                        by = c("BrthYear","cat_tier3", risk)
                     ][,
@@ -4139,7 +4061,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                                   risk, "dlv", "count_dlv_geo_yr_risk")
                     ])[,
                        `:=` (total_lvb_geo_yr_risk = sum(count_dlv_geo_yr_risk,
-                                                    na.rm = TRUE)),
+                                                         na.rm = TRUE)),
                        by = c("NetworkID","BrthYear", risk)
                     ][,
                       .SD,
@@ -4147,11 +4069,11 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                                   risk, "total_lvb_geo_yr_risk")
                     ])[,
                        `:=` (total_lvb_yr_risk = sum(total_lvb_geo_yr_risk,
-                                                na.rm = TRUE)),
+                                                     na.rm = TRUE)),
                        by = c("BrthYear", risk)
                     ][,
                       `:=` (total_lvb_geo_risk = sum(total_lvb_geo_yr_risk,
-                                                       na.rm = TRUE)),
+                                                     na.rm = TRUE)),
                       by = c("NetworkID", risk)
                     ],
               by = c("NetworkID", "NetworkName", "BrthYear", risk),
@@ -4160,8 +4082,8 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                 !is.na(NetworkName),
                 .SD,
                 .SDcols = c("NetworkID", "NetworkName", "BrthYear", "cat_tier3", risk,
-                  "total_cases_geo_yr_risk", "total_cases_yr_risk","total_cases_geo_risk",
-                  "total_lvb_geo_yr_risk","total_lvb_yr_risk","total_lvb_geo_risk")
+                            "total_cases_geo_yr_risk", "total_cases_yr_risk","total_cases_geo_risk",
+                            "total_lvb_geo_yr_risk","total_lvb_yr_risk","total_lvb_geo_risk")
               ])[,
                  `:=` (rate = 1000*total_cases_geo_yr_risk/total_lvb_geo_yr_risk),
                  by = c("NetworkID")
@@ -4186,9 +4108,9 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     c("CaseID", "CSDuid", "ZoneID", "ZnName", "BrthYear",
                       "cat_tier3", risk),
                     c("CSDuid", "ZoneID", "BrthYear", risk))[,
-                                                      .SD,
-                                                      .SDcols = c("CSDuid", "ZoneID", "ZnName", "BrthYear",
-                                                                  "cat_tier3", risk, "total_cases")
+                                                             .SD,
+                                                             .SDcols = c("CSDuid", "ZoneID", "ZnName", "BrthYear",
+                                                                         "cat_tier3", risk, "total_cases")
                     ])[,
                        `:=` (total_cases_geo_yr_risk = sum(total_cases,
                                                            na.rm = TRUE)),
@@ -4266,9 +4188,9 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     c("CaseID", "CSDuid", "area", "BrthYear",
                       "cat_tier3", risk),
                     c("CSDuid", "area", "BrthYear", risk))[,
-                         .SD,
-                         .SDcols = c("CSDuid", "area", "BrthYear",
-                         "cat_tier3", risk, "total_cases")
+                                                           .SD,
+                                                           .SDcols = c("CSDuid", "area", "BrthYear",
+                                                                       "cat_tier3", risk, "total_cases")
                     ])[,
                        `:=` (total_cases_geo_yr_risk = sum(total_cases,
                                                            na.rm = TRUE)),
@@ -4347,15 +4269,15 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     c("CaseID", "CSDuid", "CSDName", "CSDType",
                       "BrthYear", "cat_tier4", risk),
                     c("CSDuid", "BrthYear", risk))[,
-                        .SD,
-                        .SDcols = c("CSDuid", "CSDName", "BrthYear", "cat_tier4",
-                                    risk, "total_cases")
+                                                   .SD,
+                                                   .SDcols = c("CSDuid", "CSDName", "BrthYear", "cat_tier4",
+                                                               risk, "total_cases")
                     ])[,
                        `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                        by = list(CSDuid, cat_tier4, BrthYear, get(risk))
                     ])[,
                        `:=` (total_cases_yr_risk = sum(total_cases,
-                                                  na.rm = TRUE),
+                                                       na.rm = TRUE),
                              total_cases_geo_yr_risk = total_cases),
                        by = c("BrthYear","cat_tier4", risk)
                     ][,
@@ -4380,7 +4302,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                                   risk, "dlv", "count_dlv_geo_yr_risk")
                     ])[,
                        `:=` (total_lvb_geo_yr_risk = sum(count_dlv_geo_yr_risk,
-                                                    na.rm = TRUE)),
+                                                         na.rm = TRUE)),
                        by = c("CSDuid","BrthYear", risk)
                     ][,
                       .SD,
@@ -4388,11 +4310,11 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                                   risk, "total_lvb_geo_yr_risk")
                     ])[,
                        `:=` (total_lvb_yr_risk = sum(total_lvb_geo_yr_risk,
-                                                na.rm = TRUE)),
+                                                     na.rm = TRUE)),
                        by = c("BrthYear", risk)
                     ][,
                       `:=` (total_lvb_geo_risk = sum(total_lvb_geo_yr_risk,
-                                                       na.rm = TRUE)),
+                                                     na.rm = TRUE)),
                       by = c("CSDuid", risk)
                     ],
               by = c("CSDuid", "CSDName", "BrthYear", risk),
@@ -4401,8 +4323,8 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                 !is.na(CSDName),
                 .SD,
                 .SDcols = c("CSDuid", "CSDName", "BrthYear", "cat_tier4", risk,
-                  "total_cases_geo_yr_risk", "total_cases_yr_risk","total_cases_geo_yr_risk",
-                  "total_lvb_geo_yr_risk","total_lvb_yr_risk","total_lvb_geo_risk")
+                            "total_cases_geo_yr_risk", "total_cases_yr_risk","total_cases_geo_yr_risk",
+                            "total_lvb_geo_yr_risk","total_lvb_yr_risk","total_lvb_geo_risk")
               ])[,
                  `:=` (rate = 1000*total_cases_geo_yr_risk/total_lvb_geo_yr_risk),
                  by = c("CSDuid")
@@ -4426,15 +4348,15 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     q,
                     c("CaseID", "CDuid", "CDName", "BrthYear","cat_tier4", risk),
                     c("CDuid", "BrthYear", risk))[,
-                        .SD,
-                        .SDcols = c("CDuid", "CDName", "BrthYear",
-                                    "cat_tier4", risk, "total_cases")
+                                                  .SD,
+                                                  .SDcols = c("CDuid", "CDName", "BrthYear",
+                                                              "cat_tier4", risk, "total_cases")
                     ])[,
                        `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                        by = list(CDuid, cat_tier4, BrthYear, get(risk))
                     ])[,
                        `:=` (total_cases_yr_risk = sum(total_cases,
-                                                  na.rm = TRUE),
+                                                       na.rm = TRUE),
                              total_cases_geo_yr_risk = total_cases),
                        by = c("BrthYear","cat_tier4",risk)
                     ][,
@@ -4459,7 +4381,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                                   risk, "dlv", "count_dlv_geo_yr_risk")
                     ])[,
                        `:=` (total_lvb_geo_yr_risk = sum(count_dlv_geo_yr_risk,
-                                                    na.rm = TRUE)),
+                                                         na.rm = TRUE)),
                        by = c("CDuid","BrthYear",risk)
                     ][,
                       .SD,
@@ -4467,11 +4389,11 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                                   risk, "total_lvb_geo_yr_risk")
                     ])[,
                        `:=` (total_lvb_yr_risk = sum(total_lvb_geo_yr_risk,
-                                                na.rm = TRUE)),
+                                                     na.rm = TRUE)),
                        by = c("BrthYear",risk)
                     ][,
                       `:=` (total_lvb_geo_risk = sum(total_lvb_geo_yr_risk,
-                                                       na.rm = TRUE)),
+                                                     na.rm = TRUE)),
                       by = c("CDuid", risk)
                     ],
               by = c("CDuid", "CDName", "BrthYear", risk),
@@ -4480,8 +4402,8 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                 !is.na(CDName),
                 .SD,
                 .SDcols = c("CDuid", "CDName", "BrthYear", "cat_tier4", risk,
-                  "total_cases_geo_yr_risk", "total_cases_yr_risk", "total_cases_geo_risk",
-                  "total_lvb_geo_yr_risk","total_lvb_yr_risk","total_lvb_geo_risk")
+                            "total_cases_geo_yr_risk", "total_cases_yr_risk", "total_cases_geo_risk",
+                            "total_lvb_geo_yr_risk","total_lvb_yr_risk","total_lvb_geo_risk")
               ])[,
                  `:=` (rate = 1000*total_cases_geo_yr_risk/total_lvb_geo_yr_risk),
                  by = c("CDuid")
@@ -4506,15 +4428,15 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     c("CaseID", "Cluster_Number", "ClusterName",
                       "BrthYear","cat_tier4",risk),
                     c("Cluster_Number", "BrthYear", risk))[,
-                        .SD,
-                        .SDcols = c("Cluster_Number", "ClusterName", "BrthYear",
-                                    "cat_tier4", "total_cases", risk)
+                                                           .SD,
+                                                           .SDcols = c("Cluster_Number", "ClusterName", "BrthYear",
+                                                                       "cat_tier4", "total_cases", risk)
                     ])[,
                        `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                        by = list(Cluster_Number, cat_tier4, BrthYear, get(risk))
                     ])[,
                        `:=` (total_cases_yr_risk = sum(total_cases,
-                                                  na.rm = TRUE),
+                                                       na.rm = TRUE),
                              total_cases_geo_yr_risk = total_cases),
                        by = c("BrthYear","cat_tier4",risk)
                     ][,
@@ -4530,7 +4452,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
                         .SD,
                         .SDcols = c("BIRTHID", "Cluster_Number", "ClusterName",
-                                   "BrthYear", risk, "dlv")
+                                    "BrthYear", risk, "dlv")
                     ][, `:=` (count_dlv_geo_yr_risk = .N),
                       by = list(BrthYear, Cluster_Number, dlv, get(risk))
                     ][,
@@ -4539,7 +4461,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                                   risk, "dlv", "count_dlv_geo_yr_risk")
                     ])[,
                        `:=` (total_lvb_geo_yr_risk = sum(count_dlv_geo_yr_risk,
-                                                    na.rm = TRUE)),
+                                                         na.rm = TRUE)),
                        by = c("Cluster_Number","BrthYear",risk)
                     ][,
                       .SD,
@@ -4547,11 +4469,11 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                                   "total_lvb_geo_yr_risk", risk)
                     ])[,
                        `:=` (total_lvb_yr_risk = sum(total_lvb_geo_yr_risk,
-                                                na.rm = TRUE)),
+                                                     na.rm = TRUE)),
                        by = c("BrthYear", risk)
                     ][,
                       `:=` (total_lvb_geo_risk = sum(total_lvb_geo_yr_risk,
-                                                       na.rm = TRUE)),
+                                                     na.rm = TRUE)),
                       by = c("Cluster_Number",risk)
                     ],
               by = c("Cluster_Number", "ClusterName", "BrthYear", risk),
@@ -4587,15 +4509,15 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                     c("CaseID", "NetworkID", "NetworkName",
                       "BrthYear","cat_tier4",risk),
                     c("NetworkID", "BrthYear", risk))[,
-                        .SD,
-                        .SDcols = c("NetworkID", "NetworkName", "BrthYear",
-                                    risk, "cat_tier4", "total_cases")
+                                                      .SD,
+                                                      .SDcols = c("NetworkID", "NetworkName", "BrthYear",
+                                                                  risk, "cat_tier4", "total_cases")
                     ])[,
                        `:=` (total_cases = sum(total_cases, na.rm = TRUE)),
                        by = list(NetworkID, cat_tier4, BrthYear, get(risk))
                     ])[,
                        `:=` (total_cases_yr_risk = sum(total_cases,
-                                                  na.rm = TRUE),
+                                                       na.rm = TRUE),
                              total_cases_geo_yr_risk = total_cases),
                        by = c("BrthYear","cat_tier4",risk)
                     ][,
@@ -4620,7 +4542,7 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                                   risk, "dlv", "count_dlv_geo_yr_risk")
                     ])[,
                        `:=` (total_lvb_geo_yr_risk = sum(count_dlv_geo_yr_risk,
-                                                    na.rm = TRUE)),
+                                                         na.rm = TRUE)),
                        by = c("NetworkID","BrthYear",risk)
                     ][,
                       .SD,
@@ -4628,11 +4550,11 @@ buildGeoDataByCaseTimeRisk <- function(df1, df2,
                                   risk, "total_lvb_geo_yr_risk")
                     ])[,
                        `:=` (total_lvb_yr_risk = sum(total_lvb_geo_yr_risk,
-                                                na.rm = TRUE)),
+                                                     na.rm = TRUE)),
                        by = c("BrthYear", risk)
                     ][,
                       `:=` (total_lvb_geo_risk = sum(total_lvb_geo_yr_risk,
-                                                       na.rm = TRUE)),
+                                                     na.rm = TRUE)),
                       by = c("NetworkID", risk)
                     ],
               by = c("NetworkID", "NetworkName", "BrthYear", risk),
@@ -4905,7 +4827,7 @@ buildGeoDataBySrce <- function(df1,
           getSubsetByTimeRange(df1,
                                y1,
                                y2)[, .(CaseID, CSDuid, CSDName,
-                                         BrthYear, Diags, SrceIDs)
+                                       BrthYear, Diags, SrceIDs)
                                ]
         )[,`:=` (vals = 1,
                  SrceIDs = factor(
@@ -4925,7 +4847,7 @@ buildGeoDataBySrce <- function(df1,
           getSubsetByTimeRange(df1,
                                y1,
                                y2)[, .(CaseID, CDuid, CDName,
-                                         BrthYear, Diags, SrceIDs)
+                                       BrthYear, Diags, SrceIDs)
                                ]
         )[,`:=` (vals = 1,
                  SrceIDs = factor(
@@ -4945,7 +4867,7 @@ buildGeoDataBySrce <- function(df1,
           getSubsetByTimeRange(df1,
                                y1,
                                y2)[, .(CaseID, Cluster_Number, ClusterName,
-                                         BrthYear, Diags, SrceIDs)
+                                       BrthYear, Diags, SrceIDs)
                                ]
         )[,`:=` (vals = 1,
                  SrceIDs = factor(
@@ -4965,7 +4887,7 @@ buildGeoDataBySrce <- function(df1,
           getSubsetByTimeRange(df1,
                                y1,
                                y2)[, .(CaseID, NetworkID, NetworkName,
-                                         BrthYear, Diags, SrceIDs)
+                                       BrthYear, Diags, SrceIDs)
                                ]
         )[,`:=` (vals = 1,
                  SrceIDs = factor(
@@ -5027,8 +4949,8 @@ buildGeoDataBySrce <- function(df1,
           getSubsetByTimeRange(df1,
                                y1,
                                y2)[, .(CaseID, CSDuid, CSDName,
-                                         BrthYear, Diags, cat_tier3,
-                                         SrceIDs)
+                                       BrthYear, Diags, cat_tier3,
+                                       SrceIDs)
                                ]
         )[,`:=` (vals = 1,
                  SrceIDs = factor(
@@ -5048,8 +4970,8 @@ buildGeoDataBySrce <- function(df1,
           getSubsetByTimeRange(df1,
                                y1,
                                y2)[, .(CaseID, CDuid, CDName,
-                                         BrthYear, Diags, cat_tier3,
-                                         SrceIDs)
+                                       BrthYear, Diags, cat_tier3,
+                                       SrceIDs)
                                ]
         )[,`:=` (vals = 1,
                  SrceIDs = factor(
@@ -5069,8 +4991,8 @@ buildGeoDataBySrce <- function(df1,
           getSubsetByTimeRange(df1,
                                y1,
                                y2)[, .(CaseID, Cluster_Number, ClusterName,
-                                         BrthYear, Diags, cat_tier3,
-                                         SrceIDs)
+                                       BrthYear, Diags, cat_tier3,
+                                       SrceIDs)
                                ]
         )[,`:=` (vals = 1,
                  SrceIDs = factor(
@@ -5154,8 +5076,8 @@ buildGeoDataBySrce <- function(df1,
           getSubsetByTimeRange(df1,
                                y1,
                                y2)[, .(CaseID, CSDuid, CSDName,
-                                         BrthYear, Diags, cat_tier4,
-                                         SrceIDs)
+                                       BrthYear, Diags, cat_tier4,
+                                       SrceIDs)
                                ]
         )[,`:=` (vals = 1,
                  SrceIDs = factor(
@@ -5175,8 +5097,8 @@ buildGeoDataBySrce <- function(df1,
           getSubsetByTimeRange(df1,
                                y1,
                                y2)[, .(CaseID, CDuid, CDName,
-                                         BrthYear, Diags, cat_tier4,
-                                         SrceIDs)
+                                       BrthYear, Diags, cat_tier4,
+                                       SrceIDs)
                                ]
         )[,`:=` (vals = 1,
                  SrceIDs = factor(
@@ -5196,8 +5118,8 @@ buildGeoDataBySrce <- function(df1,
           getSubsetByTimeRange(df1,
                                y1,
                                y2)[, .(CaseID, Cluster_Number, ClusterName,
-                                         BrthYear, Diags, cat_tier4,
-                                         SrceIDs)
+                                       BrthYear, Diags, cat_tier4,
+                                       SrceIDs)
                                ]
         )[,`:=` (vals = 1,
                  SrceIDs = factor(
@@ -5217,8 +5139,8 @@ buildGeoDataBySrce <- function(df1,
           getSubsetByTimeRange(df1,
                                y1,
                                y2)[, .(CaseID, NetworkID, NetworkName,
-                                         BrthYear, Diags, cat_tier4,
-                                         SrceIDs)
+                                       BrthYear, Diags, cat_tier4,
+                                       SrceIDs)
                                ]
         )[,`:=` (vals = 1,
                  SrceIDs = factor(

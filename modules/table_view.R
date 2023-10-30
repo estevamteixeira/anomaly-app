@@ -1,6 +1,7 @@
 # Use 'import' from the 'modules' package.
 # These listed imports are made available inside the module scope.
 # import("plotly")
+import("arrow")
 import("data.table")
 import("DT")
 import("rintrojs")

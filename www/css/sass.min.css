@@ -50,8 +50,8 @@ body .wrapper > .content-wrapper > .content > .tab-content > .tab-pane {
 }
 
 .main-content-grid.simple-grid {
-  grid-template-areas: "gm1       gm2       gm3 " "table     table     barchart" "linechart linechart linechart";
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-areas: "gm1       gm2       gm3       gm4" "table     table     barchart  barchart" "linechart linechart linechart linechart";
+  grid-template-columns: repeat(4, 1fr);
   grid-template-rows: auto 480px;
 }
 
@@ -63,9 +63,9 @@ body .wrapper > .content-wrapper > .content > .tab-content > .tab-pane {
 
 @media (max-width: 1199px) {
   .main-content-grid.simple-grid {
-    grid-template-areas: "gm1       gm1     " "gm2       gm2     " "gm3       gm3     " "table     table   " "barchart  barchart" "linechart linehcart";
+    grid-template-areas: "gm1       gm1     " "gm2       gm2     " "gm3       gm3     " "gm4       gm4     " "table     table   " "barchart  barchart" "linechart linehcart";
     grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(2, auto) repeat(2, 480px);
+    grid-template-rows: repeat(2, auto) repeat(3, 480px);
   }
   .main-content-grid.advanced-grid {
     grid-template-areas: "lm1       lm2       lm3       lm4" "map       map       map       map" "table     table     table     table" "barchart  barchart  barchart  barchart" "linechart linechart linechart linechart";
@@ -85,7 +85,7 @@ body .wrapper > .content-wrapper > .content > .tab-content > .tab-pane {
   border-color: white;
 }
 
-#risk_info, #line_info, #cond_info {
+#risk_info, #line_info, #cond_info, #map_info {
   background: #008d8b;
   color: white;
   border-color: #EBF3F2;

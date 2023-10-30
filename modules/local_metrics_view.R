@@ -1,8 +1,6 @@
 # Use 'import' from the 'modules' package.
 # These listed imports are made available inside the module scope.
-import("arrow")
 import("dplyr")
-import("data.table")
 import("rintrojs")
 import("shiny")
 
@@ -14,7 +12,7 @@ export("init_server")
 # Use and/or register a module as dependency.
 # 'use' is similar to 'import' but instead of importing from packages,
 # we import from a module.
- # consts <- use("constants/constants.R")
+# consts <- use("constants/constants.R")
 intro <- readr::read_csv("data/intro.csv")
 
 # It is a variation of 'use' where instead of returning a module 
@@ -100,15 +98,11 @@ init_server <- function(id, df1, df2, y1, y2, q, lim){
           unique(
             unique(
               unique(
-                setDT(
-                  getSubsetByTimeRange(
-                    df2,
-                    y1(),
-                    y2(),
-                    colsToSelect = c(
-                      "BIRTHID", "CSDuid", "CSDName", "BrthYear", "dlv")
-                  ))[tolower(dlv) %in% c("lvb", "stillbirth"),
-                        
+                getSubsetByTimeRange(
+                  df2,
+                  y1(),
+                  y2())[tolower(dlv) %in% c("lvb", "stillbirth"),
+                        c("BIRTHID", "CSDuid", "CSDName", "BrthYear", "dlv")
                   ][, `:=` (count_dlv_geo_yr = .N),
                     by = list(BrthYear, CSDuid, dlv)
                   ][,
@@ -133,15 +127,12 @@ init_server <- function(id, df1, df2, y1, y2, q, lim){
           unique(
             unique(
               unique(
-                setDT(
-                  getSubsetByTimeRange(
-                    df2,
-                    y1(),
-                    y2(),
-                    colsToSelect = c(
-                      "BIRTHID", "CDuid", "CDName", "BrthYear", "dlv")
-                    ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                       ][, `:=` (count_dlv_geo_yr = .N),
+                getSubsetByTimeRange(
+                  df2,
+                  y1(),
+                  y2())[tolower(dlv) %in% c("lvb", "stillbirth"),
+                        c("BIRTHID", "CDuid", "CDName", "BrthYear", "dlv")
+                  ][, `:=` (count_dlv_geo_yr = .N),
                     by = list(BrthYear, CDuid, dlv)
                   ][,
                     c("CDuid", "CDName", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -165,15 +156,12 @@ init_server <- function(id, df1, df2, y1, y2, q, lim){
           unique(
             unique(
               unique(
-                setDT(
-                  getSubsetByTimeRange(
-                    df2,
-                    y1(),
-                    y2(),
-                    colsToSelect = c(
-                      "BIRTHID", "Cluster_Number", "ClusterName", "BrthYear", "dlv")
-                    ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                       ][, `:=` (count_dlv_geo_yr = .N),
+                getSubsetByTimeRange(
+                  df2,
+                  y1(),
+                  y2())[tolower(dlv) %in% c("lvb", "stillbirth"),
+                        c("BIRTHID", "Cluster_Number", "ClusterName", "BrthYear", "dlv")
+                  ][, `:=` (count_dlv_geo_yr = .N),
                     by = list(BrthYear, Cluster_Number, dlv)
                   ][,
                     c("Cluster_Number", "ClusterName", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -197,15 +185,12 @@ init_server <- function(id, df1, df2, y1, y2, q, lim){
           unique(
             unique(
               unique(
-                setDT(
-                  getSubsetByTimeRange(
-                    df2,
-                    y1(),
-                    y2(),
-                    colsToSelect = c(
-                      "BIRTHID", "NetworkID", "NetworkName", "BrthYear", "dlv")
-                    ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                       ][, `:=` (count_dlv_geo_yr = .N),
+                getSubsetByTimeRange(
+                  df2,
+                  y1(),
+                  y2())[tolower(dlv) %in% c("lvb", "stillbirth"),
+                        c("BIRTHID", "NetworkID", "NetworkName", "BrthYear", "dlv")
+                  ][, `:=` (count_dlv_geo_yr = .N),
                     by = list(BrthYear, NetworkID, dlv)
                   ][,
                     c("NetworkID", "NetworkName", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -228,15 +213,12 @@ init_server <- function(id, df1, df2, y1, y2, q, lim){
         return(
           unique(
             unique(
-              setDT(
-                getSubsetByTimeRange(
-                  df2,
-                  y1(),
-                  y2(),
-                  colsToSelect = c(
-                    "BIRTHID", "CSDuid", "ZoneID", "ZnName", "BrthYear", "dlv")
-                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                       ][, `:=` (count_dlv_geo_yr = .N),
+              getSubsetByTimeRange(
+                df2,
+                y1,
+                y2)[tolower(dlv) %in% c("lvb", "stillbirth"),
+                    c("BIRTHID", "CSDuid", "ZoneID", "ZnName", "BrthYear", "dlv")
+                ][, `:=` (count_dlv_geo_yr = .N),
                   by = list(BrthYear, CSDuid, ZoneID, dlv)
                 ][,
                   c("CSDuid", "ZoneID", "ZnName", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -253,15 +235,12 @@ init_server <- function(id, df1, df2, y1, y2, q, lim){
         return(
           unique(
             unique(
-              setDT(
-                getSubsetByTimeRange(
-                  df2,
-                  y1(),
-                  y2(),
-                  colsToSelect = c(
-                    "BIRTHID", "CSDuid", "area", "BrthYear", "dlv")
-                  ))[tolower(dlv) %in% c("lvb", "stillbirth")
-                     ][, `:=` (count_dlv_geo_yr = .N),
+              getSubsetByTimeRange(
+                df2,
+                y1(),
+                y2())[tolower(dlv) %in% c("lvb", "stillbirth"),
+                      c("BIRTHID", "CSDuid", "area", "BrthYear", "dlv")
+                ][, `:=` (count_dlv_geo_yr = .N),
                   by = list(BrthYear, CSDuid, area, dlv)
                 ][,
                   c("CSDuid", "area", "BrthYear", "dlv", "count_dlv_geo_yr")
@@ -345,7 +324,7 @@ init_server <- function(id, df1, df2, y1, y2, q, lim){
       if(tolower(lim()) %in% "csd")
         return(
           tags$label("Municipality")
-          )
+        )
       
       if(tolower(lim()) %in% "cd")
         return(
@@ -389,11 +368,11 @@ init_server <- function(id, df1, df2, y1, y2, q, lim){
     
     output$metricsbox1 <- renderText({
       ifelse(sum(geo_birth()$total_lvb_geo,
-                   na.rm = TRUE) < 5,
-               "< 5",
-               scales::comma(sum(geo_birth()$total_lvb_geo,
-                                 na.rm = TRUE),
-                             accuracy = 1))
+                 na.rm = TRUE) < 5,
+             "< 5",
+             scales::comma(sum(geo_birth()$total_lvb_geo,
+                               na.rm = TRUE),
+                           accuracy = 1))
     })
     
     # output$metricsbox2 <- renderText({
@@ -422,7 +401,7 @@ init_server <- function(id, df1, df2, y1, y2, q, lim){
         )
       
       return(
-      ifelse(sum(geo_anom()$total_cases,
+        ifelse(sum(geo_anom()$total_cases,
                    na.rm = TRUE) < 5,
                "< 5",
                scales::comma(sum(geo_anom()$total_cases,
@@ -455,11 +434,11 @@ init_server <- function(id, df1, df2, y1, y2, q, lim){
       
       return(
         scales::comma(
-        1000*sum(geo_anom()$total_cases,
-                 na.rm = TRUE)/sum(geo_birth()$total_lvb_geo,
-                                   na.rm = TRUE),
-        accuracy = 0.1)
-        )
+          1000*sum(geo_anom()$total_cases,
+                   na.rm = TRUE)/sum(geo_birth()$total_lvb_geo,
+                                     na.rm = TRUE),
+          accuracy = 0.1)
+      )
     })
     
     # output$metricsbox4 <- renderText({
@@ -490,7 +469,7 @@ init_server <- function(id, df1, df2, y1, y2, q, lim){
       
       if(tolower(lim()) %in% "hn")
         return(
-         14
+          14
         )
       
       if(tolower(lim()) %in% "zn")
@@ -505,5 +484,4 @@ init_server <- function(id, df1, df2, y1, y2, q, lim){
     })
   })
 }
-
 

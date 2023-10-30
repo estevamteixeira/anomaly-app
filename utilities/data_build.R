@@ -12,7 +12,7 @@ dta <- readr::read_csv("H:\\RCP\\RCP_Data\\TeixeiEC\\NSAtleePD\\data\\NSAtleePD.
 ## PCCF = Postal Code Conversion File ------
 # ******************************************
 
-pccf <- readr::read_fwf("H:\\RCP\\RCP_Data\\TeixeiEC\\pccf_2022_12_fccp\\PCCF_FCCP_V2212_2021.txt",
+pccf <- readr::read_fwf("H:\\RCP\\RCP_Data\\TeixeiEC\\PCCF\\2022\\pccf_2022_12_fccp\\PCCF_FCCP_V2212_2021.txt",
                         readr::fwf_widths(c(6,3,2,4,7,70,3,3,3,1,7,2,4,5,4,1,8,3,1,11,13,1,1,30,1,1,8,8,1,3,1,1),
                                    col_names = c("PostalCode","FSA","PR","CDuid","CSDuid","CSDName","CSDType",
                                     "CCScode","SAC","SACType","CTname","ER","DPL","FED13uid","POP_CNTR_RA",
@@ -20,9 +20,9 @@ pccf <- readr::read_fwf("H:\\RCP\\RCP_Data\\TeixeiEC\\pccf_2022_12_fccp\\PCCF_FC
                                     "SLI","PCtype","Comm_Name","DMT","HDMT","Birth_Date","Ret_Date","PO","QI",
                                     "Source","POP_CNTR_RA_SIZE_CLASS")))
 
-## Retired retired postal codes
+## Retired postal codes
 
-pccf_ret <- readr::read_fwf("H:\\RCP\\RCP_Data\\TeixeiEC\\pccf_2022_12_fccp\\PCCF_retired_FCCP_retraite_V2212_2021.txt",
+pccf_ret <- readr::read_fwf("H:\\RCP\\RCP_Data\\TeixeiEC\\PCCF\\2022\\pccf_2022_12_fccp\\PCCF_retired_FCCP_retraite_V2212_2021.txt",
                             readr::fwf_widths(c(6,3,2,4,7,70,3,3,3,1,7,2,4,5,4,1,8,3,1,11,13,1,1,30,1,1,8,8,1,3,1,1),
                                        col_names = c("PostalCode","FSA","PR","CDuid","CSDuid","CSDName","CSDType",
                                                      "CCScode","SAC","SACType","CTname","ER","DPL","FED13uid","POP_CNTR_RA",
