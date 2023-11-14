@@ -1,11 +1,38 @@
 Package: scans
 Type: Package
-Title: What the Package Does (Title Case)
+Title: An interactive open source tool on the prevalence of congenital anomalies in Nova Scotia, Canada
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Authors@R: c(
+    person(given = "Estevam",
+           family = "Teixeira",
+           role = c("aut", "cre"),
+           email = "estevam.teixeira@iwk.nshealth.ca"),
+    person("Reproductive Care Program of Nova Scotia, RCP",
+           role = c("cph", "fnd"),
+           email = "rcp@iwk.nshealth.ca"))
+Description: Survaillance of Congenital Anomalies enables intuitive,
+    rapid and reproducible population-based data on congenital anomalies
+    that will provide information to improve the health of Nova Scotia
+    children and their families.
+License: `use_mit_licence()`
 Encoding: UTF-8
-LazyData: true
+LazyData: false
+BurgReports: https://github.com/estevamteixeira/anomaly-app/issues
+Imports:
+    renv (>= 1.0.3),
+    shiny,
+    bslib,
+    plotly,
+    arrow,
+    dplyr,
+    tidyr,
+    scales,
+    DT
+Suggests:
+    testthat,
+    cancensus,
+    sf,
+    geojsonsf,
+    shiny.i18n,
+    thematic,
+    haven
