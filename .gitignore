@@ -6,4 +6,6 @@
 ^renv$
 ^renv\.lock$
 ^rsconnect
+data/
+
 
