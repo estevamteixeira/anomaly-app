@@ -185,7 +185,7 @@ ano_long <- ano %>%
          ### remove Q544 = Congenital chordee ----
          ### and Q357 = Cleft uvula ----
          !tolower(Diags) %in% c("q544","q357"),
-         Birth_Date > min(dta$BTBrthDT, na.rm = TRUE)
+         Birth_Date >= min(dta$BTBrthDT, na.rm = TRUE)
          #Prov_Res %in% 12
          ) %>%
   mutate(
@@ -307,7 +307,7 @@ ano_long <- ano %>%
       grepl("^Q000$|Q0000$|Q01|Q05", Diags) ~ "Neural tube defects",
       grepl("^Q02|Q03|Q041|Q042", Diags) ~ "Selected central nervous system defects",
       grepl("^Q110|Q111|Q112|Q160|Q172|Q30", Diags) ~ "Selected sense organ defects",
-      grepl("^Q200|Q205|Q203|Q212|Q213|Q234|Q251", Diags) ~ "Selected congenital heart defects",
+      grepl("^Q200|Q201|Q205|Q203|Q212|Q213|Q234|Q251", Diags) ~ "Selected congenital heart defects",
       grepl("^Q35|Q36|Q37", Diags) ~ "Oro-facial clefts",
       grepl("^Q39[0-4]|Q41|Q42[0-3]|Q431|Q442", Diags) ~ "Selected gastrointestinal defects",
       grepl("^Q53[1-2]|Q539|Q54|Q56|Q640", Diags) ~ "Selected genital anomalies",
@@ -326,10 +326,10 @@ ano_long <- ano %>%
       grepl("^Q02", Diags) ~ "(Q02) - Microcephaly",
       grepl("^Q03", Diags) ~ "(Q03) - Congenital hydrocephalus",
       grepl("^Q041|Q042", Diags) ~ "(Q04.1, Q04.2) - Arhinencephaly / Holoprosencephaly",
-      grepl("^Q110|Q11$|Q111|Q112", Diags) ~ "(Q11.0-Q11.2) - Anophtalmos / Microphtalmos",
-      grepl("^Q160|Q172|Q16$|Q17$", Diags) ~ "(Q16.0, Q17.2) - Anotia / Microtia",
+      grepl("^Q110|Q110$|Q111|Q112", Diags) ~ "(Q11.0-Q11.2) - Anophtalmos / Microphtalmos",
+      grepl("^Q160|Q172", Diags) ~ "(Q16.0, Q17.2) - Anotia / Microtia",
       grepl("^Q30", Diags) ~ "(Q30) - Choanal atresia",
-      grepl("^Q200|Q20$", Diags) ~ "(Q20.0) - Commom truncus",
+      grepl("^Q200|Q200$", Diags) ~ "(Q20.0) - Commom truncus",
       grepl("^Q203|Q201|Q205", Diags) ~ "(Q20.1, Q20.3, Q20.5) - Transposition of great vessels",
       grepl("^Q212", Diags) ~ "(Q21.2) - Atrioventricular septal defect",
       grepl("^Q213", Diags) ~ "(Q21.3) - Tetralogy of Fallot",
@@ -706,7 +706,7 @@ tmp_ano <- bind_rows(
          "Alcohol_Use","Cannabis_Use","diab","bmipp","smoker", # risk factors
          "matage","Link_Source",
          "Diags","cat_tier1", "cat_tier2", "cat_tier3", "cat_tier4", # condition
-         "SrceIDs"
+         "SrceIDs","BTOUTCOM","SexNum","BWNum","GANum"
   ) %>%
   arrange(CaseID) %>%
   ## keep only NS postal codes for map building
@@ -1514,15 +1514,18 @@ tmp_dta <- dta %>%
 
 ## Census Division (CD) ----
 
+### ANOMALY DATA ----
 ## Break data by 'Diags' and categories
 
 tmp_ano_diag <- tmp_ano %>%
  select("CaseID", "BIRTHID", "CONTCTID", "MOTHERID", "Post_Code",
         "Prov_Birth", "Prov_Res", "CDuid", "Birth_Date", "Birth_Year", "Alcohol_Use",
         "Cannabis_Use", "diab", "bmipp", "smoker", "matage", "Link_Source",
-        "SrceIDs", "Diags","cat_tier4") %>%
+        "SrceIDs", "Diags", "cat_tier4", "BTOUTCOM", "SexNum", "BWNum",
+        "GANum") %>%
  # Keep only categories that will bee shown in the dashboard
  filter(!is.na(cat_tier4)) %>%
+ unique() %>%
  group_by(CDuid, Birth_Year, cat_tier4) %>%
  # count cases
  mutate(count_cases = n()) %>%
@@ -1536,17 +1539,21 @@ tmp_ano_diag <- tmp_ano %>%
  mutate(count_bmipp = n()) %>%
  group_by(CDuid, Birth_Year, cat_tier4, smoker) %>%
  mutate(count_smoker = n()) %>%
+ group_by(CDuid, Birth_Year, cat_tier4, SexNum) %>%
+ mutate(count_sex = n()) %>%
  group_by(CDuid, Birth_Year, cat_tier4, matage) %>%
  mutate(count_matage = n()) %>%
  group_by(CDuid, Birth_Year, cat_tier4, SrceIDs) %>%
  mutate(count_srce = n()) %>%
  ungroup() %>%
- mutate(Diags = substr(Diags, 1,3)) %>%
- select("CaseID","CDuid", "Birth_Year", "Alcohol_Use",
+ mutate(Diags = substr(Diags, 1,3),
+        cat = cat_tier4) %>%
+ select("CaseID", "CDuid", "Birth_Year", "Alcohol_Use",
         "Cannabis_Use", "diab", "bmipp", "smoker", "matage",
-        "SrceIDs", "Diags", "cat_tier4", "count_cases", "count_alcohol",
+        "SrceIDs", "Diags", "cat", "count_cases", "count_alcohol",
         "count_cannabis", "count_diab", "count_bmipp", "count_smoker",
-        "count_matage","count_srce") %>%
+        "count_sex", "count_matage", "count_srce", "BTOUTCOM", "SexNum",
+        "BWNum", "GANum") %>%
  distinct() %>%
  arrange(CDuid, Birth_Year, Diags)
 
@@ -1554,10 +1561,11 @@ tmp_ano_diag <- tmp_ano %>%
 tmp_ano_cat <- tmp_ano %>%
  select("CaseID", "BIRTHID", "CONTCTID", "MOTHERID", "Post_Code",
         "Prov_Birth", "Prov_Res", "CDuid", "Birth_Date", "Birth_Year", "Alcohol_Use",
-        "Cannabis_Use", "diab", "bmipp", "smoker", "matage",
-        "SrceIDs", "cat_tier3") %>%
+        "Cannabis_Use", "diab", "bmipp", "smoker", "matage", "Link_Source",
+        "SrceIDs", "cat_tier3", "BTOUTCOM", "SexNum", "BWNum", "GANum") %>%
  # Keep only categories that will bee shown in the dashboard
  filter(!is.na(cat_tier3)) %>%
+ unique() %>%
  group_by(CDuid, Birth_Year, cat_tier3) %>%
  # count cases
  mutate(count_cases = n()) %>%
@@ -1571,32 +1579,112 @@ tmp_ano_cat <- tmp_ano %>%
  mutate(count_bmipp = n()) %>%
  group_by(CDuid, Birth_Year, cat_tier3, smoker) %>%
  mutate(count_smoker = n()) %>%
+ group_by(CDuid, Birth_Year, cat_tier3, SexNum) %>%
+ mutate(count_sex = n()) %>%
  group_by(CDuid, Birth_Year, cat_tier3, matage) %>%
  mutate(count_matage = n()) %>%
  group_by(CDuid, Birth_Year, cat_tier3, SrceIDs) %>%
  mutate(count_srce = n()) %>%
  ungroup() %>%
  mutate(Diags = case_when(
-  str_detect(tolower(cat_tier3), "neural") ~ "Q01",
-  str_detect(tolower(cat_tier3), "nervous") ~ "Q02",
-  str_detect(tolower(cat_tier3), "sense") ~ "Q03",
-  str_detect(tolower(cat_tier3), "heart") ~ "Q04",
-  str_detect(tolower(cat_tier3), "clefts") ~ "Q05",
-  str_detect(tolower(cat_tier3), "gastrointestinal") ~ "Q06",
-  str_detect(tolower(cat_tier3), "genital") ~ "Q07",
-  str_detect(tolower(cat_tier3), "urinary") ~ "Q08",
-  str_detect(tolower(cat_tier3), "hip") ~ "Q09",
-  str_detect(tolower(cat_tier3), "limb") ~ "Q10",
-  str_detect(tolower(cat_tier3), "abdominal") ~ "Q11",
-  str_detect(tolower(cat_tier3), "chromosomal") ~ "Q12"
- )) %>%
+  str_detect(tolower(cat_tier3), "neural") ~ "Q101",
+  str_detect(tolower(cat_tier3), "nervous") ~ "Q102",
+  str_detect(tolower(cat_tier3), "sense") ~ "Q103",
+  str_detect(tolower(cat_tier3), "heart") ~ "Q104",
+  str_detect(tolower(cat_tier3), "clefts") ~ "Q105",
+  str_detect(tolower(cat_tier3), "gastrointestinal") ~ "Q106",
+  str_detect(tolower(cat_tier3), "genital") ~ "Q107",
+  str_detect(tolower(cat_tier3), "urinary") ~ "Q108",
+  str_detect(tolower(cat_tier3), "hip") ~ "Q109",
+  str_detect(tolower(cat_tier3), "limb") ~ "Q110",
+  str_detect(tolower(cat_tier3), "abdominal") ~ "Q111",
+  str_detect(tolower(cat_tier3), "chromosomal") ~ "Q112"
+ ),
+ cat = cat_tier3) %>%
  select("CaseID","CDuid", "Birth_Year", "Alcohol_Use",
-        "Cannabis_Use", "diab", "bmipp", "smoker", "matage", "Link_Source",
-        "SrceIDs", "Diags", "cat_tier3", "count_cases", "count_alcohol",
+        "Cannabis_Use", "diab", "bmipp", "smoker", "matage",
+        "SrceIDs", "Diags", "cat", "count_cases", "count_alcohol",
         "count_cannabis", "count_diab", "count_bmipp", "count_smoker",
-        "count_matage","count_srce") %>%
+        "count_sex", "count_matage", "count_srce", "BTOUTCOM", "SexNum",
+        "BWNum", "GANum") %>%
  distinct() %>%
  arrange(CDuid, Birth_Year, Diags)
 
+tmp_ano_all <- tmp_ano %>%
+ select("CaseID", "BIRTHID", "CONTCTID", "MOTHERID", "Post_Code",
+        "Prov_Birth", "Prov_Res", "CDuid", "Birth_Date", "Birth_Year", "Alcohol_Use",
+        "Cannabis_Use", "diab", "bmipp", "smoker", "matage", "Link_Source",
+        "SrceIDs", "cat_tier3", "BTOUTCOM", "SexNum", "BWNum", "GANum") %>%
+ # Keep only categories that will bee shown in the dashboard
+ filter(!is.na(cat_tier3)) %>%
+ mutate(cat = "All conditions",
+        Diags = "Q999") %>%
+ unique() %>%
+ group_by(CDuid, Birth_Year, cat) %>%
+ # count cases
+ mutate(count_cases = n()) %>%
+ group_by(CDuid, Birth_Year, cat, Alcohol_Use) %>%
+ mutate(count_alcohol = n()) %>%
+ group_by(CDuid, Birth_Year, cat, Cannabis_Use) %>%
+ mutate(count_cannabis = n()) %>%
+ group_by(CDuid, Birth_Year, cat, diab) %>%
+ mutate(count_diab = n()) %>%
+ group_by(CDuid, Birth_Year, cat, bmipp) %>%
+ mutate(count_bmipp = n()) %>%
+ group_by(CDuid, Birth_Year, cat, smoker) %>%
+ mutate(count_smoker = n()) %>%
+ group_by(CDuid, Birth_Year, cat_tier3, SexNum) %>%
+ mutate(count_sex = n()) %>%
+ group_by(CDuid, Birth_Year, cat, matage) %>%
+ mutate(count_matage = n()) %>%
+ group_by(CDuid, Birth_Year, cat, SrceIDs) %>%
+ mutate(count_srce = n()) %>%
+ ungroup() %>%
+ select("CaseID","CDuid", "Birth_Year", "Alcohol_Use",
+        "Cannabis_Use", "diab", "bmipp", "smoker", "matage",
+        "SrceIDs", "Diags", "cat", "count_cases", "count_alcohol",
+        "count_cannabis", "count_diab", "count_bmipp", "count_smoker",
+        "count_sex", "count_matage", "count_srce", "BTOUTCOM", "SexNum",
+        "BWNum", "GANum") %>%
+ distinct() %>%
+ arrange(CDuid, Birth_Year, Diags)
 
+final_ano_cd <- bind_rows(
+ tmp_ano_all,
+ tmp_ano_cat,
+ tmp_ano_diag
+) %>%
+ arrange(CDuid, Birth_Year, Diags)
+
+### NSAPD DATA ----
+### Calculating births
+
+tmp_dta_brth_cd <- tmp_dta %>%
+ select("BIRTHID","BrthYear", "CDuid", "BTOUTCOM", "BIRTHWT", "GA_BEST") %>%
+ ## getting total births
+ filter(
+  # live births
+  !tolower(BTOUTCOM) %in% "ftd" |
+  # stillbirths
+  (tolower(BTOUTCOM) %in% "ftd" & (BIRTHWT >= 500 | GA_BEST >= 20 | is.na(BIRTHWT) | is.na(GA_BEST))) |
+  # ToP
+  !tolower(BTOUTCOM) %in% "lvd" & GA_BEST < 20,
+  BrthYear >= min(final_ano_cd$Birth_Year, na.rm = TRUE)
+ ) %>%
+ group_by(CDuid, BrthYear) %>%
+ mutate(count_brth = n()) %>%
+ ungroup() %>%
+ arrange(CDuid, BrthYear, BIRTHID) %>%
+ select("BrthYear", "CDuid", "count_brth") %>%
+ distinct()
+
+## Add birth info to anomaly data
+
+final_ano_cd <- merge(
+ final_ano_cd,
+ tmp_dta_brth_cd[,c("CDuid","BrthYear","count_brth")],
+ by.x = c("CDuid","Birth_Year"),
+ by.y = c("CDuid","BrthYear"),
+ all.x = TRUE
+)
 
