@@ -307,7 +307,7 @@ ano_long <- ano %>%
     cat_tier3 = dplyr::case_when(
       grepl("^Q000$|Q0000$|Q01|Q05", Diags) ~ "Neural tube defects",
       grepl("^Q02|Q03|Q041|Q042", Diags) ~ "Selected central nervous system defects",
-      grepl("^Q110|Q111|Q112|Q160|Q172|Q30", Diags) ~ "Selected sense organ defects",
+      grepl("^Q110|Q111|Q112|Q160|Q172|Q300", Diags) ~ "Selected sense organ defects",
       grepl("^Q200|Q201|Q205|Q203|Q212|Q213|Q234|Q251", Diags) ~ "Selected congenital heart defects",
       grepl("^Q35|Q36|Q37", Diags) ~ "Oro-facial clefts",
       grepl("^Q39[0-4]|Q41|Q42[0-3]|Q431|Q442", Diags) ~ "Selected gastrointestinal defects",
@@ -315,22 +315,22 @@ ano_long <- ano %>%
       grepl("^Q60[0-2]|Q61[1-5]|Q61[8-9]|Q64[1-3]", Diags) ~ "Selected urinary tract defects",
       grepl("^Q65", Diags) ~ "Hip dysplasia",
       grepl("^Q71[4-9]|Q72[4-9]|Q738", Diags) ~ "Limb deficiency defects",
-      grepl("^Q79[2-3]", Diags) ~ "Selected abdominal wall defects",
+      grepl("^Q79[2-3]|Q790", Diags) ~ "Selected abdominal wall defects",
       grepl("^Q90|Q91[4-7]|Q91[0-3]|Q96", Diags) ~ "Selected chromosomal defects",
       TRUE ~ NA_character_
     ),
     #### Categories ----
     cat_tier4 = dplyr::case_when(
-      grepl("^Q000$|Q0000$", Diags) ~ "(Q00) - Anencephaly and similar malformations",
+      grepl("^Q00", Diags) ~ "(Q00) - Anencephaly and similar malformations",
       grepl("^Q01", Diags) ~ "(Q01) - Encephalocele",
       grepl("^Q05", Diags) ~ "(Q05) - Spina bifida",
       grepl("^Q02", Diags) ~ "(Q02) - Microcephaly",
       grepl("^Q03", Diags) ~ "(Q03) - Congenital hydrocephalus",
       grepl("^Q041|Q042", Diags) ~ "(Q04.1, Q04.2) - Arhinencephaly / Holoprosencephaly",
-      grepl("^Q110|Q110$|Q111|Q112", Diags) ~ "(Q11.0-Q11.2) - Anophtalmos / Microphtalmos",
+      grepl("^Q110|Q111|Q112", Diags) ~ "(Q11.0-Q11.2) - Anophtalmos / Microphtalmos",
       grepl("^Q160|Q172", Diags) ~ "(Q16.0, Q17.2) - Anotia / Microtia",
-      grepl("^Q30", Diags) ~ "(Q30) - Choanal atresia",
-      grepl("^Q200|Q200$", Diags) ~ "(Q20.0) - Commom truncus",
+      grepl("^Q300", Diags) ~ "(Q30.0) - Choanal atresia",
+      grepl("^Q200", Diags) ~ "(Q20.0) - Commom truncus",
       grepl("^Q203|Q201|Q205", Diags) ~ "(Q20.1, Q20.3, Q20.5) - Transposition of great vessels",
       grepl("^Q212", Diags) ~ "(Q21.2) - Atrioventricular septal defect",
       grepl("^Q213", Diags) ~ "(Q21.3) - Tetralogy of Fallot",
@@ -1547,18 +1547,18 @@ tmp_ano_cat <- tmp_ano %>%
  filter(!is.na(cat_tier3)) %>%
  unique() %>%
  mutate(Diags = case_when(
-  str_detect(tolower(cat_tier3), "neural") ~ "Q101",
-  str_detect(tolower(cat_tier3), "nervous") ~ "Q102",
-  str_detect(tolower(cat_tier3), "sense") ~ "Q103",
-  str_detect(tolower(cat_tier3), "heart") ~ "Q104",
-  str_detect(tolower(cat_tier3), "clefts") ~ "Q105",
-  str_detect(tolower(cat_tier3), "gastrointestinal") ~ "Q106",
-  str_detect(tolower(cat_tier3), "genital") ~ "Q107",
-  str_detect(tolower(cat_tier3), "urinary") ~ "Q108",
-  str_detect(tolower(cat_tier3), "hip") ~ "Q109",
-  str_detect(tolower(cat_tier3), "limb") ~ "Q110",
-  str_detect(tolower(cat_tier3), "abdominal") ~ "Q111",
-  str_detect(tolower(cat_tier3), "chromosomal") ~ "Q112"
+  str_detect(tolower(cat_tier3), "neural") ~ "QG101",
+  str_detect(tolower(cat_tier3), "nervous") ~ "QG102",
+  str_detect(tolower(cat_tier3), "sense") ~ "QG103",
+  str_detect(tolower(cat_tier3), "heart") ~ "QG104",
+  str_detect(tolower(cat_tier3), "clefts") ~ "QG105",
+  str_detect(tolower(cat_tier3), "gastrointestinal") ~ "QG106",
+  str_detect(tolower(cat_tier3), "genital") ~ "QG107",
+  str_detect(tolower(cat_tier3), "urinary") ~ "QG108",
+  str_detect(tolower(cat_tier3), "hip") ~ "QG109",
+  str_detect(tolower(cat_tier3), "limb") ~ "QG110",
+  str_detect(tolower(cat_tier3), "abdominal") ~ "QG111",
+  str_detect(tolower(cat_tier3), "chromosomal") ~ "QG112"
  ),
  cat = cat_tier3) %>%
  select("CaseID", "CDuid","CLuid", "CLName","CHNuid","CHNName","HRuid", "HRename", "Birth_Year", "Alcohol_Use",
@@ -1594,6 +1594,83 @@ final_ano <- bind_rows(
 ) %>%
  arrange(CDuid, Birth_Year, Diags)
 
+## Birth by geography
+
+tmp_dta_brth_cd <- tmp_dta %>%
+  select("BIRTHID","BrthYear", "CDuid", "BTOUTCOM", "BIRTHWT", "GA_BEST") %>%
+  ## getting total births
+  filter(
+    # live births
+    !tolower(BTOUTCOM) %in% "ftd" |
+      # stillbirths
+      (tolower(BTOUTCOM) %in% "ftd" & (BIRTHWT >= 500 | GA_BEST >= 20 | is.na(BIRTHWT) | is.na(GA_BEST))) |
+      # ToP
+      !tolower(BTOUTCOM) %in% "lvd" & GA_BEST < 20,
+    BrthYear >= min(final_ano$Birth_Year, na.rm = TRUE)
+  ) %>%
+  group_by(CDuid, BrthYear) %>%
+  mutate(count_brth = n()) %>%
+  ungroup() %>%
+  arrange(CDuid, BrthYear, BIRTHID) %>%
+  select("BrthYear", "CDuid", "count_brth") %>%
+  distinct()
+
+tmp_dta_brth_cl <- tmp_dta %>%
+  select("BIRTHID","BrthYear", "CLuid", "CLName", "BTOUTCOM", "BIRTHWT", "GA_BEST") %>%
+  ## getting total births
+  filter(
+    # live births
+    !tolower(BTOUTCOM) %in% "ftd" |
+      # stillbirths
+      (tolower(BTOUTCOM) %in% "ftd" & (BIRTHWT >= 500 | GA_BEST >= 20 | is.na(BIRTHWT) | is.na(GA_BEST))) |
+      # ToP
+      !tolower(BTOUTCOM) %in% "lvd" & GA_BEST < 20,
+    BrthYear >= min(final_ano$Birth_Year, na.rm = TRUE)
+  ) %>%
+  group_by(CLuid, BrthYear) %>%
+  mutate(count_brth = n()) %>%
+  ungroup() %>%
+  arrange(CLuid, BrthYear, BIRTHID) %>%
+  select("BrthYear", "CLuid", "CLName", "count_brth") %>%
+  distinct()
+
+tmp_dta_brth_chn <- tmp_dta %>%
+  select("BIRTHID","BrthYear", "CHNuid", "CHNName", "BTOUTCOM", "BIRTHWT", "GA_BEST") %>%
+  ## getting total births
+  filter(
+    # live births
+    !tolower(BTOUTCOM) %in% "ftd" |
+      # stillbirths
+      (tolower(BTOUTCOM) %in% "ftd" & (BIRTHWT >= 500 | GA_BEST >= 20 | is.na(BIRTHWT) | is.na(GA_BEST))) |
+      # ToP
+      !tolower(BTOUTCOM) %in% "lvd" & GA_BEST < 20,
+    BrthYear >= min(final_ano$Birth_Year, na.rm = TRUE)
+  ) %>%
+  group_by(CHNuid, BrthYear) %>%
+  mutate(count_brth = n()) %>%
+  ungroup() %>%
+  arrange(CHNuid, BrthYear, BIRTHID) %>%
+  select("BrthYear", "CHNuid", "CHNName", "count_brth") %>%
+  distinct()
+
+tmp_dta_brth_hr <- tmp_dta %>%
+  select("BIRTHID","BrthYear", "HRuid", "HRename", "BTOUTCOM", "BIRTHWT", "GA_BEST") %>%
+  ## getting total births
+  filter(
+    # live births
+    !tolower(BTOUTCOM) %in% "ftd" |
+      # stillbirths
+      (tolower(BTOUTCOM) %in% "ftd" & (BIRTHWT >= 500 | GA_BEST >= 20 | is.na(BIRTHWT) | is.na(GA_BEST))) |
+      # ToP
+      !tolower(BTOUTCOM) %in% "lvd" & GA_BEST < 20,
+    BrthYear >= min(final_ano$Birth_Year, na.rm = TRUE)
+  ) %>%
+  group_by(HRuid, BrthYear) %>%
+  mutate(count_brth = n()) %>%
+  ungroup() %>%
+  arrange(HRuid, BrthYear, BIRTHID) %>%
+  select("BrthYear", "HRuid", "HRename", "count_brth") %>%
+  distinct()
 ## Add birth info to anomaly data
 
 final_ano <- merge(

@@ -27,7 +27,8 @@ Imports:
     dplyr,
     tidyr,
     scales,
-    DT
+    DT,
+    modules
 Suggests:
     testthat,
     cancensus,
