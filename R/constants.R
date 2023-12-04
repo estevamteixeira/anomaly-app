@@ -1,11 +1,12 @@
 # Use 'import' from the 'modules' package.
 # These listed imports are made available inside the module scope.
-import("arrow")
+modules::import("arrow")
+options(arrow.pull_as_vector = TRUE)
 # import("cancensus")
 # import("data.table")
-import("dplyr")
-import("shiny")
-import("shinydashboard")
+modules::import("dplyr")
+modules::import("shiny")
+modules::import("shinydashboard")
 # import("stringr")
 # import("utils")
 
@@ -52,7 +53,19 @@ hr_shp <- arrow::read_parquet("./data/NSC_hr.parquet", as_data_frame = FALSE)
 
 # Importing anomaly data ----
 
-ano <- arrow::read_parquet("./data/Anomaly.parquet", as_data_frame = FALSE)
+ano <- arrow::read_parquet("./data/Anomaly.parquet", as_data_frame = FALSE) %>%
+ mutate(Diag = ifelse(tolower(substr(Diags,2,2)) %in% "r" |
+                       toupper(Diags) %in% "Q999",
+                      toupper(Diags),
+                      gsub(".*?(Q\\d+\\.?\\d*).*", "\\1", cat)),
+        Diag = gsub("\\.", "", Diag)
+        ) %>%
+ arrow::as_arrow_table()
+
+# Importing birth data ----
+
+birth <- arrow::read_parquet("./data/Birth.parquet", as_data_frame = FALSE)
+
 
 # Data time range ----
 app_time_range <- paste(min(ano %>% select(Birth_Year) %>% collect(), na.rm = TRUE),
@@ -63,57 +76,95 @@ app_time_range <- paste(min(ano %>% select(Birth_Year) %>% collect(), na.rm = TR
 
 icd_lbl <- list(
  ## All conditions ----
- c(ano %>% filter(grepl("^(Q999)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull()
+ stats::setNames(
+  ano %>% filter(grepl("^(Q999)", Diags)) %>% select(Diags) %>%
+   distinct() %>% collect() %>% pull() %>% toupper(),
+  ano %>% filter(grepl("^(Q999)", Diags)) %>% select(cat) %>%
+   distinct() %>% collect() %>% pull()
   ),
  ## Neural tube defects ----
- c(ano %>% filter(grepl("^(QG101)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
-   ano %>% filter(grepl("^(Q00|Q01|Q05)", Diags)) %>% select(cat) %>% distinct() %>% mutate(cat = stringr::str_extract(cat, "(?<=-\\s).*")) %>% collect() %>% pull()
+ stats::setNames(
+  ano %>% filter(grepl("^(GR101|Q00|Q01|Q05)", Diags)) %>% select(Diag) %>%
+   distinct() %>% collect() %>% pull() %>% toupper() %>% sort(),
+  ano %>% filter(grepl("^(GR101|Q00|Q01|Q05)", Diags)) %>% arrange(Diag) %>%
+   select(Diag, cat) %>% distinct() %>% collect() %>% pull()
    ),
  ## Selected central nervous system defects ----
- c(ano %>% filter(grepl("^(QG102)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
-   ano %>% filter(grepl("^(Q02|Q03|Q041|Q042)", Diags)) %>% select(cat) %>% distinct() %>% mutate(cat = stringr::str_extract(cat, "(?<=-\\s).*")) %>% collect() %>% pull()
+ stats::setNames(
+  ano %>% filter(grepl("^(GR102|Q02|Q03|Q041|Q042)", Diags)) %>% select(Diag) %>%
+   distinct() %>% collect() %>% pull() %>% toupper() %>% sort(),
+  ano %>% filter(grepl("^(GR102|Q02|Q03|Q041|Q042)", Diags)) %>% arrange(Diag) %>%
+   select(Diag, cat) %>% distinct() %>% collect() %>% pull()
  ),
  ## Selected central nervous system defects ----
- c(ano %>% filter(grepl("^(QG103)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
-   ano %>%
-    filter(grepl("^(Q110|Q111|Q112|Q160|Q172|Q300)", Diags)) %>% select(cat) %>% distinct() %>% mutate(cat = stringr::str_extract(cat, "(?<=-\\s).*")) %>% collect() %>% pull()
+ stats::setNames(
+  ano %>% filter(grepl("^(GR103|Q110|Q111|Q112|Q160|Q172|Q300)", Diags)) %>% select(Diag) %>%
+   distinct() %>% collect() %>% pull() %>% toupper() %>%  sort(),
+  ano %>%filter(grepl("^(GR103|Q110|Q111|Q112|Q160|Q172|Q300)", Diags)) %>% arrange(Diag) %>%
+   select(Diag, cat) %>% distinct() %>% collect() %>% pull()
  ),
  ## Selected congenital heart defects ----
- c(ano %>% filter(grepl("^(QG104)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
-   ano %>%
-    filter(grepl("^(Q200|Q201|Q203|Q205|Q212|Q213|Q234|Q251)", Diags)) %>% select(cat) %>% distinct() %>% mutate(cat = stringr::str_extract(cat, "(?<=-\\s).*")) %>% collect() %>% pull()
+ stats::setNames(
+  ano %>% filter(grepl("^(GR104|Q200|Q201|Q203|Q205|Q212|Q213|Q234|Q251)", Diags)) %>% select(Diag) %>%
+   distinct() %>% collect() %>% pull() %>% toupper() %>% sort(),
+  ano %>% filter(grepl("^(GR104|Q200|Q201|Q203|Q205|Q212|Q213|Q234|Q251)", Diags)) %>% arrange(Diag) %>%
+   select(Diag, cat) %>% distinct() %>% collect() %>% pull()
  ),
  ## Oro-facial clefts ----
- c(ano %>% filter(grepl("^(QG105)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
-   ano %>% filter(grepl("^(Q35|Q36|Q37)", Diags)) %>% select(cat) %>% distinct() %>% mutate(cat = stringr::str_extract(cat, "(?<=-\\s).*")) %>% collect() %>% pull()
+ stats::setNames(
+  ano %>% filter(grepl("^(GR105|Q35|Q36|Q37)", Diags)) %>% select(Diag) %>%
+   distinct() %>% collect() %>% pull() %>% toupper() %>% sort(),
+  ano %>% filter(grepl("^(GR105|Q35|Q36|Q37)", Diags)) %>% arrange(Diag) %>%
+   select(Diag, cat) %>% distinct() %>% collect() %>% pull()
  ),
  ## Selected gastrointestinal defects ----
- c(ano %>% filter(grepl("^(QG106)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
-   ano %>% filter(grepl("^(Q39[0-4]|Q41|Q42[0-3]|Q431|Q442)", Diags)) %>% select(cat) %>% distinct() %>% mutate(cat = stringr::str_extract(cat, "(?<=-\\s).*")) %>% collect() %>% pull()
+ stats::setNames(
+  ano %>% filter(grepl("^(GR106|Q39[0-4]|Q41|Q42[0-3]|Q431|Q442)", Diags)) %>% select(Diag) %>%
+   distinct() %>% collect() %>% pull() %>% toupper() %>% sort(),
+  ano %>% filter(grepl("^(GR106|Q39[0-4]|Q41|Q42[0-3]|Q431|Q442)", Diags)) %>% arrange(Diag) %>%
+   select(Diag, cat) %>% distinct() %>% collect() %>% pull()
  ),
  ## Selected genital anomalies ----
- c(ano %>% filter(grepl("^(QG107)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
-   ano %>% filter(grepl("^(Q53[1-2]|Q539|Q54|Q56|Q640)", Diags)) %>% select(cat) %>% distinct() %>% mutate(cat = stringr::str_extract(cat, "(?<=-\\s).*")) %>% collect() %>% pull()
+ stats::setNames(
+  ano %>% filter(grepl("^(GR107|Q53[1-2]|Q539|Q54|Q56|Q640)", Diags)) %>% select(Diag) %>%
+   distinct() %>% collect() %>% pull() %>% toupper() %>% sort(),
+  ano %>% filter(grepl("^(GR107|Q53[1-2]|Q539|Q54|Q56|Q640)", Diags)) %>% arrange(Diag) %>%
+   select(Diag, cat) %>% distinct() %>% collect() %>% pull()
  ),
  ## Selected urinary tract defects ----
- c(ano %>% filter(grepl("^(QG108)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
-   ano %>% filter(grepl("^(Q60[0-2]|Q61[1-5]|Q61[8-9]|Q64[1-3])", Diags)) %>% select(cat) %>% distinct() %>% mutate(cat = stringr::str_extract(cat, "(?<=-\\s).*")) %>% collect() %>% pull()
+ stats::setNames(
+  ano %>% filter(grepl("^(GR108|Q60[0-2]|Q61[1-5]|Q61[8-9]|Q64[1-3])", Diags)) %>% select(Diag) %>%
+   distinct() %>% collect() %>% pull() %>% toupper() %>% sort(),
+  ano %>% filter(grepl("^(GR108|Q60[0-2]|Q61[1-5]|Q61[8-9]|Q64[1-3])", Diags)) %>% arrange(Diag) %>%
+   select(Diag, cat) %>% distinct() %>% collect() %>% pull()
  ),
  ## Hip dysplasia ----
- c(ano %>% filter(grepl("^(QG109)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
-   ano %>% filter(grepl("^(Q65)", Diags)) %>% select(cat) %>% distinct() %>% mutate(cat = stringr::str_extract(cat, "(?<=-\\s).*")) %>% collect() %>% pull()
+ stats::setNames(
+  ano %>% filter(grepl("^(GR109|Q65)", Diags)) %>% select(Diag) %>%
+   distinct() %>% collect() %>% pull() %>% toupper() %>% sort(),
+  ano %>% filter(grepl("^(GR109|Q65)", Diags)) %>% arrange(Diag) %>% arrange(Diag) %>%
+   select(Diag, cat) %>% distinct() %>% collect() %>% pull()
  ),
  ## Limb deficiency defects ----
- c(ano %>% filter(grepl("^(QG110)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
-   ano %>% filter(grepl("^(Q71[4-9]|Q72[4-9]|Q738)", Diags)) %>% select(cat) %>% distinct() %>% mutate(cat = stringr::str_extract(cat, "(?<=-\\s).*")) %>% collect() %>% pull()
+ stats::setNames(
+  ano %>% filter(grepl("^(GR110|Q71[4-9]|Q72[4-9]|Q738)", Diags)) %>% select(Diag) %>%
+   distinct() %>% collect() %>% pull() %>% toupper() %>% sort(),
+  ano %>% filter(grepl("^(GR110|Q71[4-9]|Q72[4-9]|Q738)", Diags)) %>% arrange(Diag) %>%
+   select(Diag, cat) %>% distinct() %>% collect() %>% pull()
  ),
  ## Selected abdominal wall defects ----
- c(ano %>% filter(grepl("^(QG111)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
-   ano %>% filter(grepl("^(Q79[2-3])", Diags)) %>% select(cat) %>% distinct() %>% mutate(cat = stringr::str_extract(cat, "(?<=-\\s).*")) %>% collect() %>% pull()
+ stats::setNames(
+  ano %>% filter(grepl("^(GR111|Q79[2-3])", Diags)) %>% select(Diag) %>%
+   distinct() %>% collect() %>% pull() %>% toupper() %>% sort(),
+  ano %>% filter(grepl("^(GR111|Q79[2-3])", Diags)) %>% arrange(Diag) %>%
+   select(Diag, cat) %>% distinct() %>%  collect() %>% pull()
  ),
  ## Selected chromosomal defects ----
- c(ano %>% filter(grepl("^(QG112)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
-   ano %>% filter(grepl("^(Q90|Q91[4-7]|Q91[0-3]|Q96)", Diags)) %>% select(cat) %>% distinct() %>% mutate(cat = stringr::str_extract(cat, "(?<=-\\s).*")) %>% collect() %>% pull()
+ stats::setNames(
+  ano %>% filter(grepl("^(GR112|Q90|Q91[4-7]|Q91[0-3]|Q96)", Diags)) %>% select(Diag) %>%
+   distinct() %>% collect() %>% pull() %>% toupper() %>% sort(),
+   ano %>% filter(grepl("^(GR112|Q90|Q91[4-7]|Q91[0-3]|Q96)", Diags)) %>% arrange(Diag) %>%
+   select(Diag, cat) %>% distinct() %>%  collect() %>% pull()
  )
 )
 
@@ -122,18 +173,18 @@ icd_lbl <- list(
 
 names(icd_lbl) <- c(
  ano %>% filter(grepl("^(Q999)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
- ano %>% filter(grepl("^(QG101)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
- ano %>% filter(grepl("^(QG102)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
- ano %>% filter(grepl("^(QG103)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
- ano %>% filter(grepl("^(QG104)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
- ano %>% filter(grepl("^(QG105)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
- ano %>% filter(grepl("^(QG106)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
- ano %>% filter(grepl("^(QG107)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
- ano %>% filter(grepl("^(QG108)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
- ano %>% filter(grepl("^(QG109)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
- ano %>% filter(grepl("^(QG110)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
- ano %>% filter(grepl("^(QG111)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
- ano %>% filter(grepl("^(QG112)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull()
+ ano %>% filter(grepl("^(GR101)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
+ ano %>% filter(grepl("^(GR102)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
+ ano %>% filter(grepl("^(GR103)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
+ ano %>% filter(grepl("^(GR104)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
+ ano %>% filter(grepl("^(GR105)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
+ ano %>% filter(grepl("^(GR106)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
+ ano %>% filter(grepl("^(GR107)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
+ ano %>% filter(grepl("^(GR108)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
+ ano %>% filter(grepl("^(GR109)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
+ ano %>% filter(grepl("^(GR110)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
+ ano %>% filter(grepl("^(GR111)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull(),
+ ano %>% filter(grepl("^(GR112)", Diags)) %>% select(cat) %>% distinct() %>% collect() %>% pull()
 )
 
 # Risk factors for lineplot ----
@@ -167,38 +218,22 @@ names(geo_lbl) <- c(
 # Add logo info ----
 
 rcp_logo <- tags$a(
- href = rcp_website,
+ href = "http://rcp.nshealth.ca/",
  target = "_blank",
  rel = "nofollow noreferrer",
- class = "logo-link",
- img(src = "www/images/rcp-logo-transparent.svg",
-     class = "logo-img",
+ # class = "logo-link",
+ tags$img(src = "www/images/rcp-logo-transparent.svg",
+     # class = "logo-img",
      alt = "RCP Logo")
 )
 
 iwk_logo <- tags$a(
- href = rcp_website,
+ href = "https://www.iwk.nshealth.ca/",
  target = "_blank",
  rel = "nofollow noreferrer",
- class = "logo-link",
- img(src = "www/images/iwk-logo-transparent.svg",
-     class = "logo-img",
+ # class = "logo-link",
+ tags$img(src = "www/images/iwk-logo-transparent.svg",
+     # class = "logo-img",
      alt = "IWK Logo")
-)
-
-# Page footer ----
-
-rcp_legal <- tags$p(
- class = "footer-legal",
- tags$span(HTML("&copy;"),
-           paste(format(Sys.Date(), "%Y"),
-                 "| All Rights Reserved | Built with ❤ by")),
- tags$a(
-  class = "footer-link",
-  href = rcp_website,
-  target = "_blank",
-  rel = "nofollow noreferrer",
-  rcp_name
- )
 )
 

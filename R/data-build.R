@@ -305,7 +305,7 @@ ano_long <- ano %>%
                               cat_tier2)),
     #### Categories ----
     cat_tier3 = dplyr::case_when(
-      grepl("^Q000$|Q0000$|Q01|Q05", Diags) ~ "Neural tube defects",
+      grepl("^Q00|Q01|Q05", Diags) ~ "Neural tube defects",
       grepl("^Q02|Q03|Q041|Q042", Diags) ~ "Selected central nervous system defects",
       grepl("^Q110|Q111|Q112|Q160|Q172|Q300", Diags) ~ "Selected sense organ defects",
       grepl("^Q200|Q201|Q205|Q203|Q212|Q213|Q234|Q251", Diags) ~ "Selected congenital heart defects",
@@ -354,6 +354,7 @@ ano_long <- ano %>%
       grepl("^Q64[2-3]", Diags) ~ "(Q64.2, Q64.3) - Lower urinary tract obstruction",
       grepl("^Q65", Diags) ~ "(Q65) - Hip dysplasia",
       grepl("^Q71[4-9]|Q72[4-9]|Q738", Diags) ~ "(Q71.4-Q71.9, Q72.4-Q72.9, Q73.8, excluding Q71.6, Q71.7, Q72.7) - Limb deficiency defects",
+      grepl("^Q790", Diags) ~ "(Q79.0) - Diaphragmatic hernia",
       grepl("^Q792", Diags) ~ "(Q79.2) - Omphalocele / Exomphalos",
       grepl("^Q793", Diags) ~ "(Q79.3) - Gastroschisis",
       grepl("^Q90", Diags) ~ "(Q90) - Down Syndrome",
@@ -1097,9 +1098,9 @@ tmp_ano <- bind_rows(
       CHNuid %in% "0413" ~ "Eastern Shore Musquodoboit",
       CHNuid %in% "0414" ~ "West Hants"
     )
-  ) %>%
+  )
  # Keep only the reported data
- filter(!is.na(cat_tier4))
+ # filter(!is.na(cat_tier4))
 
 # Preparing NSPAD data to compute number of births ----
 
@@ -1547,18 +1548,18 @@ tmp_ano_cat <- tmp_ano %>%
  filter(!is.na(cat_tier3)) %>%
  unique() %>%
  mutate(Diags = case_when(
-  str_detect(tolower(cat_tier3), "neural") ~ "QG101",
-  str_detect(tolower(cat_tier3), "nervous") ~ "QG102",
-  str_detect(tolower(cat_tier3), "sense") ~ "QG103",
-  str_detect(tolower(cat_tier3), "heart") ~ "QG104",
-  str_detect(tolower(cat_tier3), "clefts") ~ "QG105",
-  str_detect(tolower(cat_tier3), "gastrointestinal") ~ "QG106",
-  str_detect(tolower(cat_tier3), "genital") ~ "QG107",
-  str_detect(tolower(cat_tier3), "urinary") ~ "QG108",
-  str_detect(tolower(cat_tier3), "hip") ~ "QG109",
-  str_detect(tolower(cat_tier3), "limb") ~ "QG110",
-  str_detect(tolower(cat_tier3), "abdominal") ~ "QG111",
-  str_detect(tolower(cat_tier3), "chromosomal") ~ "QG112"
+  str_detect(tolower(cat_tier3), "neural") ~ "GR101",
+  str_detect(tolower(cat_tier3), "nervous") ~ "GR102",
+  str_detect(tolower(cat_tier3), "sense") ~ "GR103",
+  str_detect(tolower(cat_tier3), "heart") ~ "GR104",
+  str_detect(tolower(cat_tier3), "clefts") ~ "GR105",
+  str_detect(tolower(cat_tier3), "gastrointestinal") ~ "GR106",
+  str_detect(tolower(cat_tier3), "genital") ~ "GR107",
+  str_detect(tolower(cat_tier3), "urinary") ~ "GR108",
+  str_detect(tolower(cat_tier3), "hip") ~ "GR109",
+  str_detect(tolower(cat_tier3), "limb") ~ "GR110",
+  str_detect(tolower(cat_tier3), "abdominal") ~ "GR111",
+  str_detect(tolower(cat_tier3), "chromosomal") ~ "GR112"
  ),
  cat = cat_tier3) %>%
  select("CaseID", "CDuid","CLuid", "CLName","CHNuid","CHNName","HRuid", "HRename", "Birth_Year", "Alcohol_Use",
@@ -1568,6 +1569,8 @@ tmp_ano_cat <- tmp_ano %>%
  arrange(CDuid, Birth_Year, Diags)
 
 ## By everything ----
+## All Q codes are being considered here,
+## even those not among the sentinel anomalies
 
 tmp_ano_all <- tmp_ano %>%
  select("CaseID", #"BIRTHID", "CONTCTID", "MOTHERID", "Post_Code",
@@ -1577,7 +1580,7 @@ tmp_ano_all <- tmp_ano %>%
         "Cannabis_Use", "diab", "bmipp", "smoker", "matage",# "Link_Source",
         "SrceIDs", "cat_tier3", "BTOUTCOM", "SexNum") %>%
  # Keep only categories that will bee shown in the dashboard
- filter(!is.na(cat_tier3)) %>%
+ # filter(!is.na(cat_tier3)) %>%
  mutate(cat = "All conditions",
         Diags = "Q999") %>%
  unique() %>%
@@ -1706,10 +1709,34 @@ final_ano <- merge(
 # Export files as .csv and .parquet
 
 write_csv(final_ano,
-          paste0(getwd(), "/data/Anomaly.csv"))
+          paste0(getwd(), "/data/anomaly.csv"))
 
 write_parquet(final_ano,
-              paste0(getwd(), "/data/Anomaly.parquet"))
+              paste0(getwd(), "/data/anomaly.parquet"))
+
+# Export only one birth data for number of birth summary
+
+write_csv(dta %>%
+            filter(BrthYear >= min(final_ano$Birth_Year)) %>%
+            select(BIRTHID, BrthYear) %>%
+            distinct() %>%
+            group_by(BrthYear) %>%
+            mutate(count_brth = n()) %>%
+            ungroup() %>%
+            select(BrthYear, count_brth) %>%
+            distinct(),
+          paste0(getwd(), "/data/birth.csv"))
+
+write_parquet(dta %>%
+                filter(BrthYear >= min(final_ano$Birth_Year)) %>%
+                select(BIRTHID, BrthYear) %>%
+                distinct() %>%
+                group_by(BrthYear) %>%
+                mutate(count_brth = n()) %>%
+                ungroup() %>%
+                select(BrthYear, count_brth) %>%
+                distinct(),
+              paste0(getwd(), "/data/birth.parquet"))
 
 
 
