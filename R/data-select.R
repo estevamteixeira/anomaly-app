@@ -20,6 +20,32 @@ getSubsetData <- function(df, colsToSelect){
   )
 }
 
+#' Title
+#'
+#' @param df
+#' @param colsToSelect
+#'
+#' @return A data frame
+#' @export
+#'
+#' @examples
+calcPrev <- function(df, colsToSelect){
+ return(
+  df %>%
+   group_by(Birth_Year, !!!syms(colsToSelect[grepl("uid", colsToSelect, fixed = TRUE)])) %>%
+   mutate(count_ano = n()) %>%
+   ungroup() %>%
+   select(any_of(c("Birth_Year", "count_ano", colsToSelect))) %>%
+   distinct() %>%
+   group_by(!!!syms(colsToSelect[grepl("uid", colsToSelect, fixed = TRUE)])) %>%
+   mutate(total_ano = sum(count_ano, na.rm = TRUE),
+          total_brth = sum(!!!syms(colsToSelect[grepl("count", colsToSelect, fixed = TRUE)]), na.rm = TRUE),
+          prev = 10000*total_ano/total_brth) %>%
+   ungroup() %>%
+   select(-starts_with(c("count","total")), -Birth_Year) %>%
+   distinct()
+ )
+}
 
 
 

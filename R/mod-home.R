@@ -65,7 +65,7 @@ page_fillable(
    tags$li(style = "text-align: left; color: #000000;",
            "Create research opportunities.")
   ),
-  hr(),
+  # hr(),
   p(style = "text-align: left; color: #000000;",
     "If you have any question, please contact ",
     a(style = "color: #4D9B9A;",

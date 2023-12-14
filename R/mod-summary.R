@@ -33,7 +33,7 @@ summUI <- function(id){
 
  layout_sidebar(
   sidebar = sidebar(
-   # ICD-10 option to select
+   ## ICD-10 option to select ----
    # Options are categorized in groups
    selectInput(
     inputId = ns("icd10"),
@@ -41,7 +41,7 @@ summUI <- function(id){
     choices = NULL,
     selected = NULL
    ),
-   # Put year options side-by-side
+   ## Put year options side-by-side ----
    layout_column_wrap(
     width = 1/2,
     fill = FALSE,
@@ -62,23 +62,40 @@ summUI <- function(id){
   layout_column_wrap(
    width = 1/3,
    fill = FALSE,
+   ## Box 1 UI ----
    value_box(
     title = "Total births",
     value = textOutput(ns("brth")),
     showcase = plotlyOutput(ns("brthplot")),
     full_screen = TRUE
    ),
+   ## Box 2 UI ----
    as_fill_carrier(uiOutput(ns("case"))),
-   as_fill_carrier(uiOutput(ns("prev")))
+   ## Box 3 UI ----
+   value_box(
+    title = "Prevalence",
+    p("cases per 10,000 total births"),
+    value = textOutput(ns("prev")),
+    showcase = fontawesome::fa("people-group", width = "3em")
+    )
    ),
   card(
    full_screen = TRUE,
-   card_header("Data source"),
+   card_header(
+    tooltip(
+     span("Data source",
+          bsicons::bs_icon("question-circle")
+    ),
+    "For more information about this plot",
+    a(style='color: #FFFFFF', "(click here)",
+      href = "https://upset.app/",
+      target = "_blank")# open new tab when clicked
+   )),
    card_body(
     plotlyOutput(ns("srceplot"))
-   ),
-   card_footer("For more information about this chart",
-               a("(click here)", href = "https://upset.app/"))
+   )
+   # card_footer("For more information about this chart",
+   #             a("(click here)", href = "https://upset.app/"))
   ))
 }
 
@@ -106,7 +123,7 @@ summServer <- function(id, df1, df2, df3){
     choices = sort(
      unique(
       df3 %>%
-       filter(toupper(Diag) %in% toupper(input$icd10)) %>%
+       filter(Diag %in% input$icd10) %>%
        select(Birth_Year) %>%
        collect() %>%
        pull()
@@ -114,7 +131,7 @@ summServer <- function(id, df1, df2, df3){
     selected = c(
      min(
       df3 %>%
-       filter(toupper(Diag) %in% toupper(input$icd10)) %>%
+       filter(Diag %in% input$icd10) %>%
        select(Birth_Year) %>%
        collect() %>%
        pull(), na.rm = TRUE
@@ -134,7 +151,7 @@ summServer <- function(id, df1, df2, df3){
      sort(
       unique(
        df3 %>%
-        filter(toupper(Diag) %in% toupper(input$icd10)) %>%
+        filter(Diag %in% input$icd10) %>%
         select(Birth_Year) %>%
         collect() %>%
         pull()
@@ -143,7 +160,7 @@ summServer <- function(id, df1, df2, df3){
         sort(
          unique(
           df3 %>%
-           filter(toupper(Diag) %in% toupper(input$icd10)) %>%
+           filter(Diag %in% input$icd10) %>%
            select(Birth_Year) %>%
            collect() %>%
            pull()
@@ -153,7 +170,7 @@ summServer <- function(id, df1, df2, df3){
     selected = c(
      max(
       df3 %>%
-       filter(toupper(Diag) %in% toupper(input$icd10)) %>%
+       filter(Diag %in% input$icd10) %>%
        select(Birth_Year) %>%
        collect() %>%
        pull(), na.rm = TRUE
@@ -176,7 +193,8 @@ summServer <- function(id, df1, df2, df3){
     ungroup() %>%
     collect()
     )
-  })
+  }) %>%
+   bindCache(input$t0, input$tn)
 
   # `Anom` is a reactive expression whose results will depend on ----
   # the t0, tn, condition
@@ -185,7 +203,7 @@ summServer <- function(id, df1, df2, df3){
     getSubsetData(df3, c("CaseID","Birth_Year", "Diag")) %>%
      filter(Birth_Year >= as.numeric(input$t0),
             Birth_Year <= as.numeric(input$tn),
-            toupper(Diag) %in% toupper(input$icd10)) %>%
+            Diag %in% input$icd10) %>%
      distinct() %>%
      group_by(Birth_Year) %>%
      mutate(count_ano = n()) %>%
@@ -194,7 +212,8 @@ summServer <- function(id, df1, df2, df3){
      distinct() %>%
      collect()
    )
-  })
+  }) %>%
+   bindCache(input$t0, input$tn, input$icd10)
 
   # Text output - box 1 ----
   output$brth <- renderText({
@@ -265,7 +284,7 @@ summServer <- function(id, df1, df2, df3){
   # Text output - box 2 ----
 
   output$case <- renderUI({
-   if(toupper(input$icd10) %in% toupper("q999")){
+   if(input$icd10 %in% "Q999"){
     return(
      value_box(
       title = "Reported congenital anomalies",
@@ -291,28 +310,19 @@ summServer <- function(id, df1, df2, df3){
 
   # Text output - box 3 ----
 
-  output$prev <- renderUI({
-   if(anom() %>% pull() %>% sum(na.rm = TRUE) < 5){
-    return(
-     value_box(
-      height = "100%",
-      title = "Prevalence",
-      p("number of cases < 5"),
-      value = "Supressed",
-      showcase = fontawesome::fa("people-group", width = "3em")
+  observeEvent(anom() %>% pull() %>% sum(na.rm = TRUE),{
+   output$prev <- renderText(
+    if (anom() %>% pull() %>% sum(na.rm = TRUE) < 5){
+     return(
+      "Supressed"
      )
-    )
-   }
-    return(
-    value_box(
-     height = "100%",
-     title = "Prevalence",
-     p("cases per 10,000 total births"),
-     value = scales::comma(
-      10000*(anom() %>% pull() %>% sum(na.rm = TRUE)/birth() %>% pull() %>% sum(na.rm = TRUE)),
-      accuracy = 0.01),
-     showcase = fontawesome::fa("people-group", width = "3em")
-    )
+    } else {
+     return(
+      scales::comma(
+       10000*(anom() %>% pull() %>% sum(na.rm = TRUE)/birth() %>% pull() %>% sum(na.rm = TRUE)),
+       accuracy = 0.01)
+     )
+    }
    )
   })
 
@@ -324,7 +334,7 @@ summServer <- function(id, df1, df2, df3){
     temp <- getSubsetData(df3, c("CaseID","Birth_Year","Diag","SrceIDs")) %>%
      filter(Birth_Year >= as.numeric(input$t0),
             Birth_Year <= as.numeric(input$tn),
-            toupper(Diag) %in% toupper(input$icd10)) %>%
+            Diag %in% input$icd10) %>%
      select("CaseID","SrceIDs") %>%
      mutate(vals = 1,
             SrceIDs = factor(
@@ -407,7 +417,7 @@ summServer <- function(id, df1, df2, df3){
   calculateIntersections <- reactive({
    selected_sets <- getSets()
 
-   withProgress(message = "Calculating set intersections", value = 0, {
+   # withProgress(message = "Calculating set intersections", value = 0, {
    sets <- getSets()
    nsets <- length(sets)
 
@@ -462,7 +472,7 @@ summServer <- function(id, df1, df2, df3){
 
    list(combinations = combos, intersections = intersects)
 
-   })
+   # })
   })
 
   ## Dot-line intersection plot ----
@@ -489,7 +499,7 @@ summServer <- function(id, df1, df2, df3){
 
    # Create dataset
    dta <- data.table::rbindlist(lapply(1:nintersections, function(combono) {
-    data.frame(
+    tibble(
      combo = combono,
      x = rep(combono, max(2, length(combos[[combono]]))),
      y = (nsets - combos[[combono]]) + 1,
@@ -616,7 +626,7 @@ summServer <- function(id, df1, df2, df3){
    setnames <- names(selected_sets)
 
    dta <- data.table::setDT(
-    data.frame(
+    tibble(
      combo = 1:length(unlist(lapply(selected_sets, length))),
      size  = as.integer(unlist(lapply(selected_sets, length))),
      label = names(unlist(lapply(selected_sets, length))))
@@ -732,7 +742,7 @@ summServer <- function(id, df1, df2, df3){
    # Dataset
    dta <- unique(data.table::rbindlist(
     lapply(1:nintersections, function(combono) {
-     data.frame(
+     tibble(
       combo = combono,
       name = setnames[combos[[combono]]],
       size = intersects[combono])
@@ -826,7 +836,7 @@ summServer <- function(id, df1, df2, df3){
 
   # Plot output - UpsetPlot ----
   output$srceplot <- renderPlotly({
-   validate(need(nrow(upset()) > 0,
+   validate(need(nrow(upset()) > 3,
                  "Sorry, there is no data available for the selected options.
              \nPlease, choose different years and/or conditions."))
 
@@ -879,6 +889,5 @@ summServer <- function(id, df1, df2, df3){
                     "hoverCompareCartesian"
                    ))
    })
-
   })
 }

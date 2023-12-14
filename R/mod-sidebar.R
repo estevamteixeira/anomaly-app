@@ -133,7 +133,7 @@ sideServer <- function(id, df1, df2){
   # Return reactive output from the selectInputs
   # reactive expression
   return(
-    list(id10 = reactive(input$icd10),
+    c(id10 = reactive(input$icd10),
          t0 = reactive(input$t0),
          tn = reactive(input$tn))
     )
