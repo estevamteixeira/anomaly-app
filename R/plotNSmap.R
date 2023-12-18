@@ -30,9 +30,10 @@ nsmap <- function(df, var){
  leaflet::leaflet(
   data = dta,
   padding = 0,
-  options = leafletOptions(minZoom = 6)
+  options = leafletOptions(minZoom = 6.45)
  ) |>
   leaflet::addPolygons(
+   layerId = ~dplyr::row_number(GeoUID),
    stroke = TRUE,
    fillColor = ~pal(dta[[var]]),
    weight = 0.5,
@@ -42,7 +43,7 @@ nsmap <- function(df, var){
    fillOpacity = 1,
    highlightOptions = highlightOptions(
     weight = 2,
-    color = "#00706E",
+    color = "#FE9B00",
     dashArray = "",
     bringToFront = TRUE),
    label = lab,

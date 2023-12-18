@@ -41,17 +41,20 @@ cd_shp <- geoarrow::read_geoparquet_sf("./data/NSC_cd.parquet") %>%
 ## Community Clusters (CL) ----
 
 cl_shp <- geoarrow::read_geoparquet_sf("./data/NSC_cl.parquet") %>%
+ rename(GeoUID = clusterid) %>%
  arrow_table()
 
 ## Community Health Networks (CHN) ----
 
 chn_shp <- geoarrow::read_geoparquet_sf("./data/NSC_chn.parquet") %>%
+ rename(GeoUID = network_id) %>%
  arrow_table()
 
 ## Health Authority Zones (HR) ----
 
 hr_shp <- geoarrow::read_geoparquet_sf("./data/NSC_hr.parquet") %>%
  select(ZoneID, Name, geometry) %>%
+ rename(GeoUID = ZoneID) %>%
  arrow_table()
 
 # Importing anomaly data ----

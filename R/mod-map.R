@@ -8,6 +8,7 @@ modules::import("DT")
 modules::import("leaflet")
 modules::import("sf")
 modules::import("shiny")
+modules::import("shinyjs")
 
 # Define which objects from the module you make available to a user ----
 # All other objects are kept private, local, to the module.
@@ -26,6 +27,7 @@ mapUI <- function(id){
  ns <- NS(id)
 
  layout_sidebar(
+  shinyjs::useShinyjs(),
   sidebar = sidebar(
    ## ICD-10 option to select ----
    # Options are categorized in groups
@@ -57,10 +59,17 @@ mapUI <- function(id){
     label = "Geographic unit",
     choices = NULL,
     selected = NULL
-   )
+   ),
+   ## conditionally show or hide UI elements based on a JavaScript expression
+    ## checks if the geo_selected_data input exists and is not undefined
+    ## If both conditions are true, the UI elements will be displayed
+    conditionalPanel("typeof input.geotable_rows_selected() !== 'undefined' ||
+                     input.geotable_rows_selected.length() > 0",
+                     uiOutput(ns("controls"))
+    )
   ),
   layout_columns(
-   col_widths = c(8,4),
+   col_widths = c(7,5),
    card(
    full_screen = TRUE,
    card_header(
@@ -81,7 +90,7 @@ mapUI <- function(id){
     class = "d-flex justify-content-between align-items-center"
     ),
    card_body(
-    leafletOutput(ns("map")),
+    leafletOutput(ns("geomap")),
    )
   ),
   card(
@@ -90,7 +99,7 @@ mapUI <- function(id){
     "Surveillance Table"
    ),
    card_body(
-    DT::dataTableOutput(ns("table")),
+    DT::dataTableOutput(ns("geotable")),
    )
   ))
   )
@@ -194,7 +203,7 @@ mapServer <- function(id, df1, df2, df3, df4, df5, df6, df7){
   })
 
   # Select field depending on the selected geographic unit ----
-  field <- reactive({
+  fields <- reactive({
    if(input$geo %in% "cd")  return(c("CDuid","count_brth_cd"))
    if(input$geo %in% "cl")  return(c("CLuid","count_brth_cl"))
    if(input$geo %in% "chn") return(c("CHNuid","count_brth_chn"))
@@ -205,19 +214,19 @@ mapServer <- function(id, df1, df2, df3, df4, df5, df6, df7){
   # the t0, tn, condition, and geo
   anom <- reactive({
    return(
-    getSubsetData(df2, c("CaseID","Birth_Year", "Diag", field())) %>%
+    getSubsetData(df2, c("CaseID","Birth_Year", "Diag", fields())) %>%
      filter(Birth_Year >= as.numeric(input$t0),
             Birth_Year <= as.numeric(input$tn),
             Diag %in% input$icd10) %>%
      distinct() %>%
-     calcPrev(colsToSelect = field()) %>%
+     calcPrev(colsToSelect = fields()) %>%
      collect()
    )
   })
 
   # Create `geo` data: merge `Anom()` with the shape file to draw the map ----
 
-  geo <- reactive({
+  geodta <- reactive({
    merge(
     shape() ,
     anom(),
@@ -225,22 +234,18 @@ mapServer <- function(id, df1, df2, df3, df4, df5, df6, df7){
     by.y = names(anom())[which(grepl("id",tolower(names(anom()))))],
     all.x = TRUE
    ) %>%
+    arrange(desc(prev)) %>%
     geoarrow::geoarrow_collect_sf()
   })
 
   # Map output ----
-  output$map <- renderLeaflet({
-   validate(need(nrow(geo()) > 0,
+  output$geomap <- renderLeaflet({
+   req(geodta())
+   validate(need(nrow(geodta()) > 0,
                  "Sorry, there is no data available for the selected options.
              \nPlease, choose different years and/or conditions."))
 
-   # withProgress(message = "Building map", value = 0, {
-   #  for (i in 1:10) {
-   #   incProgress(1/10)
-   #   Sys.sleep(0.25)
-   #  }
-   # })
-   nsmap(geo(), "prev")
+   nsmap(geodta(), "prev")
    })
 
   # Map download ----
@@ -253,57 +258,35 @@ mapServer <- function(id, df1, df2, df3, df4, df5, df6, df7){
   # Othw, this object should be put inside the DT::renderDT() call
 
   sketch <- htmltools::withTags(table(
-   tableHeader(c("GeoUID", "Name", "Prevalence"),
-               escape = FALSE),
-   # tableFooter(
-   #   c("", "Grand Total",
-   #     format(
-   #       c(sum(unique(consts$cd_stats[,.(BrthYear, CD_UID, cd.count_anom, cat_tier2)])$cd.count_anom),
-   #         sum(unique(consts$cd_stats[,.(BrthYear, total_lvb, CD_UID)])$total_lvb),
-   #         round(1000*sum(unique(consts$cd_stats[,.(BrthYear, CD_UID, cd.count_anom, cat_tier2)])$cd.count_anom)/sum(unique(consts$cd_stats[,.(BrthYear, total_lvb, CD_UID)])$total_lvb),
-   #               0)
-   #       ),
-   #       big.mark = ","
-   #     )
-   #   )
-   # )
+   tableHeader(c("GeoUID", "Name", "Prevalence", "geometry"),
+               escape = FALSE)
   ))
 
   # DataTable object
-  output$table <- DT::renderDT({
-
-   validate(need(nrow(geo()) > 0,
+  output$geotable <- DT::renderDT({
+   req(geodta())
+   validate(need(nrow(geodta()) > 0,
                  "Sorry, there is no data available for the selected options.
             \nPlease, choose different years and/or conditions."))
 
    DT::datatable(
-    geo() %>% as_tibble() %>% select(-geometry) %>% arrange(desc(prev)),
+    geodta(),
     container = sketch,
     rownames = FALSE,
     style = "auto",
     selection = 'single',
     extensions = "Buttons",
-    caption = "cases per 10,000 total births",
+    caption = "Prevalence is expressed as cases per 10,000 total births.",
     options = list(
      dom = 'B<t>ftp',
      extensions = "Buttons",
      search = list(regex = TRUE, caseInsensitive = TRUE),
      paging = TRUE,
      pageLength = 5,
-     width = c("30px","100px","30px","30px","100px"),
      ordering = TRUE,
      stateSave = TRUE,
-     # buttons = list('copy', 'print', list(
-     #   extend = 'collection',
-     #   buttons = list(
-     #     list(extend = 'csv', filename = "geo_view")
-     #      # list(extend = 'excel', filename = "trend_results"),
-     #      # list(extend = 'pdf', filename = "trend_results")
-     #   ),
-     #   text = 'Download'
-     # )),
      columnDefs = list(list(visible = FALSE,
-                            targets = c(0)))
+                            targets = c(0,3)))
     )
    ) |>
     DT::formatRound(
@@ -314,13 +297,64 @@ mapServer <- function(id, df1, df2, df3, df4, df5, df6, df7){
   }, server = FALSE)
 
   # DataTable proxy object ----
-  DTproxy <- DT::dataTableProxy("table")
+  DTproxy <- DT::dataTableProxy("geotable")
 
-  return(
-   list(line_selected = reactive({
-    geo()[input$table_rows_selected,]
-   })
-   ))
+ observeEvent(input$geotable_rows_selected,{
+
+  l <- input$geotable_rows_selected
+
+  # Show the controls when a row is selected
+  shinyjs::show("controls")
+
+  # Update map with selected line
+  leaflet::leafletProxy("geomap", session, data = geodta()[l,]) |>
+    leaflet::removeShape("bounds") |>
+    leaflet::setView(
+     lat = mean(sf::st_bbox(geodta()[l,])[c(2,4)]),
+     lng = mean(sf::st_bbox(geodta()[l,])[c(1,3)]),
+     zoom = 8) |>
+    leaflet::addPolygons(data = geodta()[l,],
+                         color = "#FF0000",
+                         opacity = 1,
+                         fill = FALSE,
+                         weight = 3,
+                         layerId = "bounds")
+ })
+
+  ## Reset button ----
+  output$controls <- renderUI({
+   req(input$geotable_rows_selected)
+
+   absolutePanel(id = "controls",
+                 actionButton(inputId = ns("reset"),
+                              label = "Reset map"))
 
   })
+
+  ## Resetting map to original value when reset button is clicked ----
+  observeEvent(input$reset, {
+
+   # Hiding the control button
+   shinyjs::hide("controls")
+
+   # plotting original map
+   leaflet::leafletProxy("geomap", data = geodta()) |>
+    leaflet::removeShape("bounds") |>
+    leaflet::setView(
+     lat = mean(sf::st_bbox(geodta())[c(2,4)]),
+     lng = mean(sf::st_bbox(geodta())[c(1,3)]),
+     zoom = 7.45)
+
+   # clear row selection ----
+   selectRows(DTproxy, selected = NULL)
+  })
+
+ observeEvent(input$geomap_shape_click,{
+  sc <- input$geomap_shape_click$id
+
+  selectRows(DTproxy, selected = which(dplyr::row_number(geodta()[["GeoUID"]]) %in% sc))
+  selectPage(DTproxy, which(input$geotable_rows_all %in% sc) %/% input$geotable_state$length + 1)
+ })
+
+ })
 }

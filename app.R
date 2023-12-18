@@ -41,17 +41,17 @@ ui <- page_navbar(
 server <- function(input, output, session) {
 
    # Home tab server ----
-   # homeTab$homeServer("home")
+   # session$userData$homeTab <- homeTab$homeServer("home")
 
    # Summary tab server ----
-   # summTab$summServer(
+   # session$userData$summTab <- summTab$summServer(
    #  id = "summary",
    #  df1 = consts$icd_lbl,
    #  df2 = consts$birth,
    #  df3 = consts$ano)
 
    # Map tab server ----
-   mapTab$mapServer(
+ session$userData$mapTab <- mapTab$mapServer(
     id = "map",
     df1 = consts$icd_lbl,
     df2 = consts$ano,
@@ -64,7 +64,7 @@ server <- function(input, output, session) {
  }
 
 
-# profvis::profvis({
+ # profvis::profvis({runApp(
 shinyApp(ui, server)
-# })
+ # )})
 
