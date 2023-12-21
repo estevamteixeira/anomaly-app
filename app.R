@@ -7,7 +7,7 @@ consts <- use("R/constants.R")
 homeTab <- use("R/mod-home.R")
 summTab <- use("R/mod-summary.R")
 mapTab <- use("R/mod-map.R")
-
+trendTab <- use("R/mod-trend.R")
 
 ui <- page_navbar(
       title = consts$app_title,
@@ -23,17 +23,21 @@ ui <- page_navbar(
          base_font = font_google("Montserrat", local = TRUE)
       ) %>%
          bs_add_rules(".optgroup-header {font-size: 1rem !important; color: #AAAAAA !important;}"),
-      # nav_panel("Home",
-      #           homeTab$homeUI("home"),
-      #           icon = bsicons::bs_icon("house-fill")
-      #           ),
-      # nav_panel("Summary",
-      #           summTab$summUI("summary"),
-      #           icon = bsicons::bs_icon("list-ul")
-      #           ),
+      nav_panel("Home",
+                homeTab$homeUI("home"),
+                icon = bsicons::bs_icon("house-fill")
+                ),
+      nav_panel("Summary",
+                summTab$summUI("summary"),
+                icon = bsicons::bs_icon("list-ul")
+                ),
       nav_panel("Map Tool",
                 mapTab$mapUI("map"),
                 icon = bsicons::bs_icon("geo-fill")
+      ),
+      nav_panel("Trend",
+                trendTab$trendUI("trend"),
+                icon = bsicons::bs_icon("graph-up-arrow")
       )
    )
 
@@ -41,14 +45,14 @@ ui <- page_navbar(
 server <- function(input, output, session) {
 
    # Home tab server ----
-   # session$userData$homeTab <- homeTab$homeServer("home")
+   session$userData$homeTab <- homeTab$homeServer("home")
 
    # Summary tab server ----
-   # session$userData$summTab <- summTab$summServer(
-   #  id = "summary",
-   #  df1 = consts$icd_lbl,
-   #  df2 = consts$birth,
-   #  df3 = consts$ano)
+   session$userData$summTab <- summTab$summServer(
+    id = "summary",
+    df1 = consts$icd_lbl,
+    df2 = consts$birth,
+    df3 = consts$ano)
 
    # Map tab server ----
  session$userData$mapTab <- mapTab$mapServer(
@@ -61,6 +65,14 @@ server <- function(input, output, session) {
     df6 = consts$chn_shp,
     df7 = consts$hr_shp
    )
+
+ # Lineplot tab server ----
+ session$userData$trendTab <- trendTab$trendServer(
+  id = "trend",
+  df1 = consts$icd_lbl,
+  df2 = consts$ano,
+  df3 = consts$risk_lbl
+ )
  }
 
 

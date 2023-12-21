@@ -333,19 +333,45 @@ names(icd_lbl) <- c(
 
 # Risk factors for lineplot ----
 
-risk_lbl <- sort(
- c("Alcohol_Use", "Cannabis_Use", "diab", "bmipp", "smoker", "matage", "SexNum")
- )
+risk_lbl <- c(
+ stats::setNames(
+   "Alcohol_Use",
+   "Alcohol Use"
+  ),
+ stats::setNames(
+  "bmipp",
+  "BMI"
+ ),
+ stats::setNames(
+  "Cannabis_Use",
+  "Cannabis Use"
+ ),
+ stats::setNames(
+  "diab",
+  "Diabetes"
+ ),
+ stats::setNames(
+  "SexNum",
+  "Fetal Sex"
+ ),
+ stats::setNames(
+  "matage",
+  "Maternal Age"
+ ),
+ stats::setNames(
+  "smoker",
+  "Smoking Use"
+  )
+ ) %>%
+ list()
 
 # The outermost names will be used as label in the dash
 
-names(risk_lbl) <- c(
- "Alcohol Use", "BMI", "Cannabis Use", "Diabetes", "Maternal Age", "Fetal Sex", "Smoking Use"
-)
+names(risk_lbl) <- c(" ")
 
 # Order in alphabetical order based on the labels in the dash
 
-risk_lbl <- risk_lbl[order(names(risk_lbl))]
+# risk_lbl <- risk_lbl[order(names(risk_lbl))]
 
 # Geographies for maps ----
 

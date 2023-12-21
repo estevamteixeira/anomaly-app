@@ -343,17 +343,19 @@ mapServer <- function(id, df1, df2, df3, df4, df5, df6, df7){
     leaflet::setView(
      lat = mean(sf::st_bbox(geodta())[c(2,4)]),
      lng = mean(sf::st_bbox(geodta())[c(1,3)]),
-     zoom = 7.45)
+     zoom = 6.45)
 
    # clear row selection ----
    selectRows(DTproxy, selected = NULL)
+   # go to page 1
+   selectPage(DTproxy, 1)
   })
 
  observeEvent(input$geomap_shape_click,{
   sc <- input$geomap_shape_click$id
 
-  selectRows(DTproxy, selected = which(dplyr::row_number(geodta()[["GeoUID"]]) %in% sc))
-  selectPage(DTproxy, which(input$geotable_rows_all %in% sc) %/% input$geotable_state$length + 1)
+  selectRows(DTproxy, selected = which(geodta()[["GeoUID"]] %in% sc))
+  selectPage(DTproxy, ceiling(which(geodta()[["GeoUID"]] %in% sc) / input$geotable_state[["length"]]))
  })
 
  })

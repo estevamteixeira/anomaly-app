@@ -25,7 +25,7 @@ getSubsetData <- function(df, colsToSelect){
 #' @param df
 #' @param colsToSelect
 #'
-#' @return A data frame
+#' @return A data frame with the prevalence per 10,000 total births computed. Used in the map module.
 #' @export
 #'
 #' @examples
@@ -47,7 +47,33 @@ calcPrev <- function(df, colsToSelect){
  )
 }
 
-
+#' Title
+#'
+#' @param df
+#' @param colsToSelect
+#'
+#' @return A data frame with the prevalence per 10,000 total births computed. Used in the trend module.
+#' @export
+#'
+#' @examples
+calcPrevTrend <- function(df, colsToSelect){
+ return(
+  df %>%
+   group_by(Birth_Year, !!!syms(colsToSelect[!grepl("count", colsToSelect, fixed = TRUE)])) %>%
+   mutate(count_ano = n()) %>%
+   ungroup() %>%
+   select(any_of(c("Birth_Year", "count_ano", colsToSelect))) %>%
+   distinct() %>%
+   group_by(Birth_Year, !!!syms(colsToSelect[!grepl("count", colsToSelect, fixed = TRUE)])) %>%
+   mutate(total_ano = count_ano,
+          total_brth = sum(!!!syms(colsToSelect[grepl("count", colsToSelect, fixed = TRUE)]), na.rm = TRUE),
+          prev = 10000*total_ano/total_brth) %>%
+   ungroup() %>%
+   select(-starts_with(c("count","total"))) %>%
+   arrange(Birth_Year,!!!syms(colsToSelect[!grepl("count", colsToSelect, fixed = TRUE)])) %>%
+   distinct()
+ )
+}
 
 
 

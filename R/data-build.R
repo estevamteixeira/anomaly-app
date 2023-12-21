@@ -1674,6 +1674,159 @@ tmp_dta_brth_hr <- tmp_dta %>%
   arrange(HRuid, BrthYear, BIRTHID) %>%
   select("BrthYear", "HRuid", "HRename", "count_brth") %>%
   distinct()
+
+tmp_dta_brth_yr <- tmp_dta %>%
+ select("BIRTHID","BrthYear", "BTOUTCOM", "BIRTHWT", "GA_BEST") %>%
+ ## getting total births
+ filter(
+  # live births
+  !tolower(BTOUTCOM) %in% "ftd" |
+   # stillbirths
+   (tolower(BTOUTCOM) %in% "ftd" & (BIRTHWT >= 500 | GA_BEST >= 20 | is.na(BIRTHWT) | is.na(GA_BEST))) |
+   # ToP
+   !tolower(BTOUTCOM) %in% "lvd" & GA_BEST < 20,
+  BrthYear >= min(final_ano$Birth_Year, na.rm = TRUE)
+ ) %>%
+ group_by(BrthYear) %>%
+ mutate(count_brth = n()) %>%
+ ungroup() %>%
+ arrange(BrthYear, BIRTHID) %>%
+ select("BrthYear", "count_brth") %>%
+ distinct()
+
+tmp_dta_brth_matage <- tmp_dta %>%
+ select("BIRTHID","BrthYear", "BTOUTCOM", "BIRTHWT", "GA_BEST", "matage") %>%
+ ## getting total births
+ filter(
+  # live births
+  !tolower(BTOUTCOM) %in% "ftd" |
+   # stillbirths
+   (tolower(BTOUTCOM) %in% "ftd" & (BIRTHWT >= 500 | GA_BEST >= 20 | is.na(BIRTHWT) | is.na(GA_BEST))) |
+   # ToP
+   !tolower(BTOUTCOM) %in% "lvd" & GA_BEST < 20,
+  BrthYear >= min(final_ano$Birth_Year, na.rm = TRUE)
+ ) %>%
+ group_by(BrthYear, matage) %>%
+ mutate(count_brth = n()) %>%
+ ungroup() %>%
+ arrange(BrthYear, BIRTHID) %>%
+ select("BrthYear", "count_brth", "matage") %>%
+ distinct()
+
+tmp_dta_brth_sex <- tmp_dta %>%
+ select("BIRTHID","BrthYear", "BTOUTCOM", "BIRTHWT", "GA_BEST", "BTSEX") %>%
+ ## getting total births
+ filter(
+  # live births
+  !tolower(BTOUTCOM) %in% "ftd" |
+   # stillbirths
+   (tolower(BTOUTCOM) %in% "ftd" & (BIRTHWT >= 500 | GA_BEST >= 20 | is.na(BIRTHWT) | is.na(GA_BEST))) |
+   # ToP
+   !tolower(BTOUTCOM) %in% "lvd" & GA_BEST < 20,
+  BrthYear >= min(final_ano$Birth_Year, na.rm = TRUE)
+ ) %>%
+ group_by(BrthYear, BTSEX) %>%
+ mutate(count_brth = n()) %>%
+ ungroup() %>%
+ arrange(BrthYear, BIRTHID) %>%
+ select("BrthYear", "count_brth", "BTSEX") %>%
+ distinct()
+
+tmp_dta_brth_diab <- tmp_dta %>%
+ select("BIRTHID","BrthYear", "BTOUTCOM", "BIRTHWT", "GA_BEST", "diab") %>%
+ ## getting total births
+ filter(
+  # live births
+  !tolower(BTOUTCOM) %in% "ftd" |
+   # stillbirths
+   (tolower(BTOUTCOM) %in% "ftd" & (BIRTHWT >= 500 | GA_BEST >= 20 | is.na(BIRTHWT) | is.na(GA_BEST))) |
+   # ToP
+   !tolower(BTOUTCOM) %in% "lvd" & GA_BEST < 20,
+  BrthYear >= min(final_ano$Birth_Year, na.rm = TRUE)
+ ) %>%
+ group_by(BrthYear, diab) %>%
+ mutate(count_brth = n()) %>%
+ ungroup() %>%
+ arrange(BrthYear, BIRTHID) %>%
+ select("BrthYear", "count_brth", "diab") %>%
+ distinct()
+
+tmp_dta_brth_bmi <- tmp_dta %>%
+ select("BIRTHID","BrthYear", "BTOUTCOM", "BIRTHWT", "GA_BEST", "bmipp") %>%
+ ## getting total births
+ filter(
+  # live births
+  !tolower(BTOUTCOM) %in% "ftd" |
+   # stillbirths
+   (tolower(BTOUTCOM) %in% "ftd" & (BIRTHWT >= 500 | GA_BEST >= 20 | is.na(BIRTHWT) | is.na(GA_BEST))) |
+   # ToP
+   !tolower(BTOUTCOM) %in% "lvd" & GA_BEST < 20,
+  BrthYear >= min(final_ano$Birth_Year, na.rm = TRUE)
+ ) %>%
+ group_by(BrthYear, bmipp) %>%
+ mutate(count_brth = n()) %>%
+ ungroup() %>%
+ arrange(BrthYear, BIRTHID) %>%
+ select("BrthYear", "count_brth", "bmipp") %>%
+ distinct()
+
+tmp_dta_brth_can <- tmp_dta %>%
+ select("BIRTHID","BrthYear", "BTOUTCOM", "BIRTHWT", "GA_BEST", "Cannabis_Use") %>%
+ ## getting total births
+ filter(
+  # live births
+  !tolower(BTOUTCOM) %in% "ftd" |
+   # stillbirths
+   (tolower(BTOUTCOM) %in% "ftd" & (BIRTHWT >= 500 | GA_BEST >= 20 | is.na(BIRTHWT) | is.na(GA_BEST))) |
+   # ToP
+   !tolower(BTOUTCOM) %in% "lvd" & GA_BEST < 20,
+  BrthYear >= min(final_ano$Birth_Year, na.rm = TRUE)
+ ) %>%
+ group_by(BrthYear, Cannabis_Use) %>%
+ mutate(count_brth = n()) %>%
+ ungroup() %>%
+ arrange(BrthYear, BIRTHID) %>%
+ select("BrthYear", "count_brth", "Cannabis_Use") %>%
+ distinct()
+
+tmp_dta_brth_alc <- tmp_dta %>%
+ select("BIRTHID","BrthYear", "BTOUTCOM", "BIRTHWT", "GA_BEST", "Alcohol_Use") %>%
+ ## getting total births
+ filter(
+  # live births
+  !tolower(BTOUTCOM) %in% "ftd" |
+   # stillbirths
+   (tolower(BTOUTCOM) %in% "ftd" & (BIRTHWT >= 500 | GA_BEST >= 20 | is.na(BIRTHWT) | is.na(GA_BEST))) |
+   # ToP
+   !tolower(BTOUTCOM) %in% "lvd" & GA_BEST < 20,
+  BrthYear >= min(final_ano$Birth_Year, na.rm = TRUE)
+ ) %>%
+ group_by(BrthYear, Alcohol_Use) %>%
+ mutate(count_brth = n()) %>%
+ ungroup() %>%
+ arrange(BrthYear, BIRTHID) %>%
+ select("BrthYear", "count_brth", "Alcohol_Use") %>%
+ distinct()
+
+tmp_dta_brth_smk <- tmp_dta %>%
+ select("BIRTHID","BrthYear", "BTOUTCOM", "BIRTHWT", "GA_BEST", "smoker") %>%
+ ## getting total births
+ filter(
+  # live births
+  !tolower(BTOUTCOM) %in% "ftd" |
+   # stillbirths
+   (tolower(BTOUTCOM) %in% "ftd" & (BIRTHWT >= 500 | GA_BEST >= 20 | is.na(BIRTHWT) | is.na(GA_BEST))) |
+   # ToP
+   !tolower(BTOUTCOM) %in% "lvd" & GA_BEST < 20,
+  BrthYear >= min(final_ano$Birth_Year, na.rm = TRUE)
+ ) %>%
+ group_by(BrthYear, smoker) %>%
+ mutate(count_brth = n()) %>%
+ ungroup() %>%
+ arrange(BrthYear, BIRTHID) %>%
+ select("BrthYear", "count_brth", "smoker") %>%
+ distinct()
+
 ## Add birth info to anomaly data
 
 final_ano <- merge(
@@ -1703,7 +1856,64 @@ final_ano <- merge(
   by.x = c("HRuid", "HRename","Birth_Year"),
   by.y = c("HRuid", "HRename","BrthYear"),
   all.x = TRUE
- )
+ ) %>%
+ merge(
+  tmp_dta_brth_yr %>%
+   rename(count_brth_yr = count_brth),
+  by.x = c("Birth_Year"),
+  by.y = c("BrthYear"),
+  all.x = TRUE
+ ) %>%
+ merge(
+  tmp_dta_brth_matage %>%
+   rename(count_brth_matage = count_brth),
+  by.x = c("Birth_Year","matage"),
+  by.y = c("BrthYear","matage"),
+  all.x = TRUE
+ ) %>%
+ merge(
+  tmp_dta_brth_alc %>%
+   rename(count_brth_alc = count_brth),
+  by.x = c("Birth_Year", "Alcohol_Use"),
+  by.y = c("BrthYear", "Alcohol_Use"),
+  all.x = TRUE
+ ) %>%
+ merge(
+  tmp_dta_brth_bmi %>%
+   rename(count_brth_bmi = count_brth),
+  by.x = c("Birth_Year", "bmipp"),
+  by.y = c("BrthYear", "bmipp"),
+  all.x = TRUE
+ ) %>%
+ merge(
+  tmp_dta_brth_can %>%
+   rename(count_brth_cann = count_brth),
+  by.x = c("Birth_Year", "Cannabis_Use"),
+  by.y = c("BrthYear", "Cannabis_Use"),
+  all.x = TRUE
+ ) %>%
+ merge(
+  tmp_dta_brth_diab %>%
+   rename(count_brth_diab = count_brth),
+  by.x = c("Birth_Year", "diab"),
+  by.y = c("BrthYear", "diab"),
+  all.x = TRUE
+ ) %>%
+ merge(
+  tmp_dta_brth_sex %>%
+   rename(count_brth_sex = count_brth),
+  by.x = c("Birth_Year", "SexNum"),
+  by.y = c("BrthYear", "BTSEX"),
+  all.x = TRUE
+ ) %>%
+ merge(
+  tmp_dta_brth_smk %>%
+   rename(count_brth_smk = count_brth),
+  by.x = c("Birth_Year", "smoker"),
+  by.y = c("BrthYear","smoker"),
+  all.x = TRUE
+ ) %>%
+ distinct()
 
 
 # Export files as .csv and .parquet

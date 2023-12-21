@@ -33,7 +33,7 @@ nsmap <- function(df, var){
   options = leafletOptions(minZoom = 6.45)
  ) |>
   leaflet::addPolygons(
-   layerId = ~dplyr::row_number(GeoUID),
+   layerId = ~GeoUID,
    stroke = TRUE,
    fillColor = ~pal(dta[[var]]),
    weight = 0.5,
