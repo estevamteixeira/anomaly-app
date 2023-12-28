@@ -2,9 +2,11 @@
 # These listed imports are made available inside the module scope
 modules::import("arrow")
 modules::import("bslib")
+modules::import("data.table")
 modules::import("dplyr")
 modules::import("plotly")
 modules::import("shiny")
+modules::import("stringr")
 
 # Define which objects from the module you make available to a user ----
 # All other objects are kept private, local, to the module.
@@ -77,20 +79,20 @@ summUI <- function(id){
     p("cases per 10,000 total births"),
     value = textOutput(ns("prev")),
     showcase = fontawesome::fa("people-group", width = "3em")
-    )
-   ),
+   )
+  ),
   card(
    full_screen = TRUE,
    card_header(
     tooltip(
      span("Data source",
           bsicons::bs_icon("question-circle")
-    ),
-    "For more information about this plot",
-    a(style='color: #FFFFFF', "(click here)",
-      href = "https://upset.app/",
-      target = "_blank")# open new tab when clicked
-   )),
+     ),
+     "For more information about this plot",
+     a(style='color: #FFFFFF', "(click here)",
+       href = "https://upset.app/",
+       target = "_blank")# open new tab when clicked
+    )),
    card_body(
     plotlyOutput(ns("srceplot"))
    )
@@ -184,15 +186,15 @@ summServer <- function(id, df1, df2, df3){
   birth <- reactive({
    return(
     df2 %>%
-    filter(BrthYear >= as.numeric(input$t0),
-           BrthYear <= as.numeric(input$tn)) %>%
-    group_by(BrthYear) %>%
-    mutate(total = sum(count_brth)) %>%
-    select(BrthYear, total) %>%
-    distinct() %>%
-    ungroup() %>%
-    collect()
-    )
+     filter(BrthYear >= as.numeric(input$t0),
+            BrthYear <= as.numeric(input$tn)) %>%
+     group_by(BrthYear) %>%
+     mutate(total = sum(count_brth)) %>%
+     select(BrthYear, total) %>%
+     distinct() %>%
+     ungroup() %>%
+     collect()
+   )
   }) %>%
    bindCache(input$t0, input$tn)
 
@@ -331,31 +333,31 @@ summServer <- function(id, df1, df2, df3){
   # source: https://github.com/pinin4fjords/upset-shiny-plotly/blob/master/app.R
 
   upset <- reactive({
-    temp <- getSubsetData(df3, c("CaseID","Birth_Year","Diag","SrceIDs")) %>%
-     filter(Birth_Year >= as.numeric(input$t0),
-            Birth_Year <= as.numeric(input$tn),
-            Diag %in% input$icd10) %>%
-     select("CaseID","SrceIDs") %>%
-     mutate(vals = 1,
-            SrceIDs = factor(
-             case_when(
-              SrceIDs %in% "1" ~ "FADB",
-              SrceIDs %in% "2" ~ "NSAPD",
-              SrceIDs %in% "3" ~ "Cardio",
-              SrceIDs %in% "4" ~ "CIHI",
-              SrceIDs %in% "5" ~ "MSI",
-              SrceIDs %in% "6" ~ "NeoNatal",
-              SrceIDs %in% "7" ~ "Others"))
-            ) %>%
-     distinct() %>%
-     collect()
+   temp <- getSubsetData(df3, c("CaseID","Birth_Year","Diag","SrceIDs")) %>%
+    filter(Birth_Year >= as.numeric(input$t0),
+           Birth_Year <= as.numeric(input$tn),
+           Diag %in% input$icd10) %>%
+    select("CaseID","SrceIDs") %>%
+    mutate(vals = 1,
+           SrceIDs = factor(
+            case_when(
+             SrceIDs %in% "1" ~ "FADB",
+             SrceIDs %in% "2" ~ "NSAPD",
+             SrceIDs %in% "3" ~ "Cardio",
+             SrceIDs %in% "4" ~ "CIHI",
+             SrceIDs %in% "5" ~ "MSI",
+             SrceIDs %in% "6" ~ "NeoNatal",
+             SrceIDs %in% "7" ~ "Others"))
+    ) %>%
+    distinct() %>%
+    collect()
 
-    ## Create a 0-1 matrix with all the possible combinations
+   ## Create a 0-1 matrix with all the possible combinations
    return(
     tidyr::pivot_wider(temp,
-     names_from = SrceIDs,
-     values_from = vals,
-     values_fill = 0
+                       names_from = SrceIDs,
+                       values_from = vals,
+                       values_fill = 0
     )
    )
   })
@@ -375,8 +377,8 @@ summServer <- function(id, df1, df2, df3){
    # withProgress(message = "Deriving input sets", value = 0, {
 
    logical_cols <- names(upset())[which(sapply(upset(), function(x){
-     all(x %in% c(0, 1)) %in% TRUE
-    }))]
+    all(x %in% c(0, 1)) %in% TRUE
+   }))]
 
    names(logical_cols) <- logical_cols
    lapply(logical_cols, function(x)
@@ -385,31 +387,31 @@ summServer <- function(id, df1, df2, df3){
    # })
   })
 
-   ## Subset sets to those selected ----
+  ## Subset sets to those selected ----
 
-   getSelectedSets <- reactive({
+  getSelectedSets <- reactive({
 
-    valid_sets <- getValidSets()
-    validate(need(!is.null(valid_sets), "Please upload data"))
+   valid_sets <- getValidSets()
+   validate(need(!is.null(valid_sets), "Please upload data"))
 
-    chosen_sets <- getSelectedSetNames()
-    sets <- valid_sets[chosen_sets]
-    sets <- sets[order(unlist(lapply(sets, length)))]
+   chosen_sets <- getSelectedSetNames()
+   sets <- valid_sets[chosen_sets]
+   sets <- sets[order(unlist(lapply(sets, length)))]
 
-   })
+  })
 
-   getSets <- reactive({
-    selected_sets <- getValidSets()[
-     order(
-      unlist(
-       lapply(
-        getValidSets(), length)))]
+  getSets <- reactive({
+   selected_sets <- getValidSets()[
+    order(
+     unlist(
+      lapply(
+       getValidSets(), length)))]
 
-    req(length(selected_sets) > 0)
+   req(length(selected_sets) > 0)
 
-    nsets <- length(selected_sets)
-    selected_sets[1:min(nsets, length(selected_sets))]
-   })
+   nsets <- length(selected_sets)
+   selected_sets[1:min(nsets, length(selected_sets))]
+  })
 
   ## Compute intersection ----
   ## Retuns a list of all possible combinations of sets
@@ -498,8 +500,8 @@ summServer <- function(id, df1, df2, df3){
    setnames <- names(selected_sets)
 
    # Create dataset
-   dta <- data.table::rbindlist(lapply(1:nintersections, function(combono) {
-    tibble(
+   ddta <- data.table::rbindlist(lapply(1:nintersections, function(combono) {
+    data.table::data.table(
      combo = combono,
      x = rep(combono, max(2, length(combos[[combono]]))),
      y = (nsets - combos[[combono]]) + 1,
@@ -511,7 +513,7 @@ summServer <- function(id, df1, df2, df3){
 
    ### Create base plot ----
    plot <- plot_ly(
-    data = dta,
+    data = ddta,
     type = "scatter",
     mode = "markers",
     marker = list(color = "#E3E7E9", #light-gray
@@ -521,42 +523,42 @@ summServer <- function(id, df1, df2, df3){
     unselected = list(marker = list(opacity = 0.5))
    ) %>%
     add_trace( ### grey dots background ----
-    type = "scatter",
-    x = rep(1:nintersections,
-            length(selected_sets)),
-    y = unlist(lapply(1:length(selected_sets), function(x)
-     rep(x - 0.5, nintersections))),
-    hoverinfo = "none",
-    marker = list(color = "#E3E7E9", #light-gray
-                  size = 5),
-    customdata= ~rep(unique(label),length(selected_sets))
-   ) %>% add_trace( ## green dots - sets
-    type = "scatter",
-    data = group_by(dta, combo),
-    mode = "lines+markers",
-    x = ~x,
-    y = ~y - 0.5,
-    line = list(width = 3, color = info$fg(), opacity = 0.2),
-    marker = list(size = 5, color = info$fg()),
-    hoverinfo = "text",
-    text = ~label
-   ) %>% layout(
-    xaxis = list(
-     title = "",
-     showticklabels = FALSE,
-     showgrid = FALSE,
-     zeroline = FALSE
-    ),
-    yaxis = list(
-     title = "",
-     showticklabels = FALSE,
-     showgrid = TRUE,
-     range = c(0, nsets),
-     zeroline = FALSE,
-     range = 1:nsets
-    ),
-    margin = list(t = 0, b = 0)
-   ) %>%
+               type = "scatter",
+               x = rep(1:nintersections,
+                       length(selected_sets)),
+               y = unlist(lapply(1:length(selected_sets), function(x)
+                rep(x - 0.5, nintersections))),
+               hoverinfo = "none",
+               marker = list(color = "#E3E7E9", #light-gray
+                             size = 5),
+               customdata= ~rep(unique(label),length(selected_sets))
+    ) %>% add_trace( ## green dots - sets
+     type = "scatter",
+     data = group_by(ddta, combo),
+     mode = "lines+markers",
+     x = ~x,
+     y = ~y - 0.5,
+     line = list(width = 3, color = info$fg(), opacity = 0.2),
+     marker = list(size = 5, color = info$fg()),
+     hoverinfo = "text",
+     text = ~label
+    ) %>% layout(
+     xaxis = list(
+      title = "",
+      showticklabels = FALSE,
+      showgrid = FALSE,
+      zeroline = FALSE
+     ),
+     yaxis = list(
+      title = "",
+      showticklabels = FALSE,
+      showgrid = TRUE,
+      range = c(0, nsets),
+      zeroline = FALSE,
+      range = 1:nsets
+     ),
+     margin = list(t = 0, b = 0)
+    ) %>%
     plotly::style(hoverlabel = list(
      bgcolor  = "black",
      bordercolor = "transparent",
@@ -571,17 +573,22 @@ summServer <- function(id, df1, df2, df3){
    ## Work on the logic to update the color of
    ## hovered dots
 
-   if (is.null(tract_grd())){
+   if(is.null(tract_grd())){
     plot
-   } else {
-    # Filter data
-    hoverdata <- dta %>% filter(combo %in% tract_grd()$x)
+   } else{
+
+    if(is.numeric(tract_grd()$y)){
+     # Filter data
+     dclick <- ddta %>% filter(combo %in% tract_grd()$x)
+    } else{
+     dclick <- ddta %>% filter(name %in% tract_grd()$y)
+    }
 
     # Update plot
     plot %>%
      add_trace( ## coloring orange when hovering
       type = "scatter",
-      data = group_by(hoverdata, combo),
+      data = group_by(dclick, combo),
       mode = "lines+markers",
       x = ~x,
       y = ~y - 0.5,
@@ -625,8 +632,8 @@ summServer <- function(id, df1, df2, df3){
    selected_sets <- getSets()
    setnames <- names(selected_sets)
 
-   dta <- data.table::setDT(
-    tibble(
+   hdta <- data.table::setDT(
+    data.table::data.table(
      combo = 1:length(unlist(lapply(selected_sets, length))),
      size  = as.integer(unlist(lapply(selected_sets, length))),
      label = names(unlist(lapply(selected_sets, length))))
@@ -634,7 +641,7 @@ summServer <- function(id, df1, df2, df3){
 
    # Base plot
    plot <- plot_ly(
-    data = dta,
+    data = hdta,
     x = ~size,
     y = ~label,
     type = "bar",
@@ -686,19 +693,19 @@ summServer <- function(id, df1, df2, df3){
     plot
    } else {
     # Filter data
-    hoverdata <- dta %>%
+    hclick <- hdta %>%
      filter(
       label %in% unique(
        unlist(
         strsplit(
          tract_grd()$customdata, " \u2229 ", fixed = T)))
-    )
+     )
 
     # Update plot
     plot %>%
      add_trace( ## coloring orange when hovering
       type = "bar",
-      data = hoverdata,
+      data = hclick,
       x = ~size,
       y = ~label,
       orientation = "h",
@@ -740,7 +747,7 @@ summServer <- function(id, df1, df2, df3){
    setnames <- names(selected_sets)
 
    # Dataset
-   dta <- unique(data.table::rbindlist(
+   vdta <- unique(data.table::rbindlist(
     lapply(1:nintersections, function(combono) {
      tibble(
       combo = combono,
@@ -751,12 +758,12 @@ summServer <- function(id, df1, df2, df3){
                             paste0(name, collapse = " \u2229 "),
                             name)), by = .(combo)
     ][,
-      .(combo, label, size)
+      .(combo, name, label, size)
     ])
 
    # Base plot
    plot <- plot_ly(
-    data = dta,
+    data = vdta,
     showlegend = FALSE,
     source = "vertical",
     unselected = list(marker = list(opacity = 0.5)),
@@ -774,6 +781,7 @@ summServer <- function(id, df1, df2, df3){
       "<extra></extra>"
      )
     ) %>% layout(
+     barmode = "overlay",
      yaxis = list(
       face = "bold",
       size = 14,
@@ -801,14 +809,18 @@ summServer <- function(id, df1, df2, df3){
    if (is.null(tract_grd())){
     plot
    } else {
-    # Filter data
-    hoverdata <- dta %>% filter(combo %in% tract_grd()$x)
+    if(is.numeric(tract_grd()$y)){
+     # Filter data
+     vclick <- vdta %>% filter(combo %in% tract_grd()$x)
+    } else{
+     vclick <- vdta %>% filter(name %in% tract_grd()$y)
+    }
 
     # Update plot
     plot %>%
      add_trace( ## coloring orange when hovering
       type = "bar",
-      data = hoverdata,
+      data = vclick,
       x = ~combo,
       y = ~size,
       marker = list(color = "#FFA500", # orange
@@ -888,6 +900,6 @@ summServer <- function(id, df1, df2, df3){
                     "hoverClosestCartesian",
                     "hoverCompareCartesian"
                    ))
-   })
   })
+ })
 }

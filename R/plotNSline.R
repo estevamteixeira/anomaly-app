@@ -87,8 +87,8 @@ plot_line <- function(data, var){
                   "zoom2d",
                   "pan2d",
                   "lasso2d",
-                  # "autoScale2d",
-                  # "resetScale2d",
+                  "autoScale2d",
+                  "resetScale2d",
                   "hoverClosestCartesian",
                   "hoverCompareCartesian"
                  ))
@@ -252,8 +252,8 @@ plot_line_risk <- function(data, var, risk){
                   "zoom2d",
                   "pan2d",
                   "lasso2d",
-                  # "autoScale2d",
-                  # "resetScale2d",
+                  "autoScale2d",
+                  "resetScale2d",
                   "hoverClosestCartesian",
                   "hoverCompareCartesian"
                  ))
