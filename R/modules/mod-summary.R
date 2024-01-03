@@ -431,9 +431,7 @@ summServer <- function(id, df1, df2, df3){
      x[, i])
    }
 
-   startsize <- 1
-
-   combos <- lapply(startsize:nsets, function(x) {
+   combos <- lapply(1:nsets, function(x) {
     combinations(1:length(selected_sets), x)
    })
 
@@ -441,18 +439,15 @@ summServer <- function(id, df1, df2, df3){
 
    # withProgress(message = "Running intersect()", value = 0, {
 
-   intersects <- lapply(combos, function(combonos) {
-    lapply(combonos, function(combo) {
-     Reduce(intersect, selected_sets[combo])
-    })
-   })
-   # })
+   intersects <- purrr::map(combos, ~purrr::map(
+    .x, ~Reduce(intersect, selected_sets[.x])
+   ))
 
    # For UpSet-ness, membership of higher-order intersections takes
    # priority. Otherwise just return the number of entries in each
    # intersection
 
-   intersects <- lapply(1:length(intersects), function(i) {
+   intersects <- lapply(seq_along(intersects), function(i) {
     intersectno <- intersects[[i]]
     members_in_higher_levels <- unlist(intersects[(i + 1):length(intersects)])
     lapply(intersectno, function(intersect) {
@@ -498,6 +493,8 @@ summServer <- function(id, df1, df2, df3){
 
    nsets <- length(selected_sets)
    setnames <- names(selected_sets)
+
+   # Assuming `nintersections`, `combos`, `nsets`, and `setnames` are defined
 
    # Create dataset
    ddta <- data.table::rbindlist(lapply(1:nintersections, function(combono) {
@@ -749,7 +746,7 @@ summServer <- function(id, df1, df2, df3){
    # Dataset
    vdta <- unique(data.table::rbindlist(
     lapply(1:nintersections, function(combono) {
-     tibble(
+     data.table::data.table(
       combo = combono,
       name = setnames[combos[[combono]]],
       size = intersects[combono])

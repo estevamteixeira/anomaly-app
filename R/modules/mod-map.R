@@ -3,11 +3,12 @@
 modules::import("arrow")
 modules::import("bslib")
 modules::import("dplyr")
-modules::import("geoarrow") # remotes::install_github("paleolimbot/geoarrow")
 modules::import("DT")
 modules::import("leaflet")
+modules::import("mapview")
 modules::import("sf")
 modules::import("shiny")
+modules::import("shinycssloaders")
 modules::import("shinyjs")
 
 # Define which objects from the module you make available to a user ----
@@ -80,13 +81,14 @@ mapUI <- function(id){
      "Geographical links were determined based on",strong("mothers'"),
      "postal codes at the time of admission for delivery."
     ),
-    # popover(
-    #  bsicons::bs_icon("download"),
-    #  radioButtons(ns("map_down"),
-    #               label = NULL, inline = TRUE,
-    #               c(".png",".jpeg")),
-    #  title = "Download map"
-    # ),
+    tooltip(
+     downloadButton(ns("map_down"),
+                  label = "",
+                  inline = TRUE,
+                  icon = shiny::icon("camera")
+                  ),
+     "Download map as png"
+     ),
     class = "d-flex justify-content-between align-items-center"
     ),
    card_body(
@@ -234,9 +236,11 @@ mapServer <- function(id, df1, df2, df3, df4, df5, df6, df7){
     by.y = names(anom())[which(grepl("id",tolower(names(anom()))))],
     all.x = TRUE
    ) %>%
-    arrange(desc(prev)) %>%
-    geoarrow::geoarrow_collect_sf()
+    arrange(desc(prev))
   })
+
+  map <- reactiveValues(dat = NULL, mapView = NULL)
+
 
   # Map output ----
   output$geomap <- renderLeaflet({
@@ -245,20 +249,127 @@ mapServer <- function(id, df1, df2, df3, df4, df5, df6, df7){
                  "Sorry, there is no data available for the selected options.
              \nPlease, choose different years and/or conditions."))
 
-   nsmap(geodta(), "prev")
+   map$dat <- nsmap(geodta(), "prev")
    })
 
   # Map download ----
-  # output$map_down <- downloadHandler(
-  #  filename = ""
-  # )
 
-  # This allows to add footer with totals
+  output$map_down <- downloadHandler(
+
+   filename = "map.png",
+
+   content = function(file){
+    # temporarily switch to the temp dir, in case you do not have write
+    # permission to the current working directory
+    owd <- setwd(tempdir())
+    on.exit(setwd(owd))
+
+    if(!is.null(map$mapView)){
+
+     withProgress(message = "Creating file", value = 0,{
+
+      Sys.sleep(0.25)
+      incProgress(1/10)
+
+     dta <- geodta() %>% filter(GeoUID %in% map$mapView$GeoUID)
+
+     Sys.sleep(0.25)
+     incProgress(3/10)
+
+     # color palette
+     pal <- leaflet::colorBin(
+      c("#CCE2E2", "#00706E", "#002423"), # RCP green colors - https://www.color-hex.com/
+      domain = geodta()[["prev"]]
+     )
+
+     Sys.sleep(0.25)
+     incProgress(5/10)
+
+     # Popup label
+     lab <- ifelse(
+      is.na(dta[["prev"]]) | dta[["prev"]] %in% 0,
+      paste(
+       "<b>",stringr::str_to_title(dta[[which(!grepl("id|geometry|prev",tolower(names(dta))))]]),"</b>",
+       "<br>No information provided"
+      ),
+      paste(
+       "<b>",stringr::str_to_title(dta[[which(!grepl("id|geometry|prev",tolower(names(dta))))]]),"</b>",
+       "<br>Prevalence:" , scales::comma(dta[["prev"]], accuracy = 0.01)
+      )
+     ) |> lapply(htmltools::HTML)
+
+     Sys.sleep(0.25)
+     incProgress(7/10)
+
+     mapview::mapshot(
+      nsmap(geodta(), "prev") |>
+       leaflet::addLegend(
+                pal = pal,
+                values = ~dta[["prev"]],
+                opacity = 1,
+                title = "",
+                position = "bottomright",
+                na.label = "Not informed"
+              ) |>
+       leaflet::setView(
+        lat = mean(sf::st_bbox(dta)[c(2,4)]),
+        lng = mean(sf::st_bbox(dta)[c(1,3)]),
+        zoom = 9) |>
+       leaflet::addPolygons(data = dta,
+                            color = "#FF0000",
+                            opacity = 1,
+                            fill = FALSE,
+                            weight = 3,
+                            layerId = "bounds") |>
+       leaflet::addPopups(
+        lat = mean(sf::st_bbox(dta)[c(2,4)]),
+        lng = mean(sf::st_bbox(dta)[c(1,3)]),
+        popup = lab,
+        options = popupOptions(closeButton = FALSE)),
+      file = file)
+
+     Sys.sleep(0.25)
+     incProgress(10/10)
+
+    })
+    } else{
+     withProgress(message = "Creating file, please wait.", value = 0,{
+      Sys.sleep(0.25)
+      incProgress(1/10)
+
+      # color palette
+      pal <- leaflet::colorBin(
+       c("#CCE2E2", "#00706E", "#002423"), # RCP green colors - https://www.color-hex.com/
+       domain = geodta()[["prev"]]
+      )
+
+      Sys.sleep(0.25)
+      incProgress(5/10)
+
+     mapview::mapshot(
+      map$dat |>
+       leaflet::addLegend(
+        pal = pal,
+        values = ~geodta()[["prev"]],
+        opacity = 1,
+        title = "",
+        position = "bottomright",
+        na.label = "Not informed"
+       ),
+      file = file)
+
+     Sys.sleep(0.25)
+     incProgress(10/10)
+   }) }
+    }
+  )
+
+    # This allows to add footer with totals
   # Here we need to make use of the isolate() function
   # Othw, this object should be put inside the DT::renderDT() call
 
   sketch <- htmltools::withTags(table(
-   tableHeader(c("GeoUID", "Name", "Prevalence", "geometry"),
+   tableHeader(c("GeoUID", "Name", "Prevalence"),
                escape = FALSE)
   ))
 
@@ -270,7 +381,7 @@ mapServer <- function(id, df1, df2, df3, df4, df5, df6, df7){
             \nPlease, choose different years and/or conditions."))
 
    DT::datatable(
-    geodta(),
+    geodta() %>% as_tibble() %>% select(-geometry) %>% arrange(desc(prev)),
     container = sketch,
     rownames = FALSE,
     style = "auto",
@@ -286,7 +397,7 @@ mapServer <- function(id, df1, df2, df3, df4, df5, df6, df7){
      ordering = TRUE,
      stateSave = TRUE,
      columnDefs = list(list(visible = FALSE,
-                            targets = c(0,3)))
+                            targets = c(0)))
     )
    ) |>
     DT::formatRound(
@@ -319,12 +430,16 @@ mapServer <- function(id, df1, df2, df3, df4, df5, df6, df7){
                          fill = FALSE,
                          weight = 3,
                          layerId = "bounds")
+
+  # Update reactiveValues with current map view
+  map$mapView <- leaflet::getMapData(
+   leaflet::leafletProxy("geomap", session, data = geodta()[l,])
+   )
  })
 
   ## Reset button ----
   output$controls <- renderUI({
    req(input$geotable_rows_selected)
-
    absolutePanel(id = "controls",
                  actionButton(inputId = ns("reset"),
                               label = "Reset map"))
@@ -349,6 +464,9 @@ mapServer <- function(id, df1, df2, df3, df4, df5, df6, df7){
    selectRows(DTproxy, selected = NULL)
    # go to page 1
    selectPage(DTproxy, 1)
+
+   # Reset mapView
+   map$mapView = NULL
   })
 
  observeEvent(input$geomap_shape_click,{

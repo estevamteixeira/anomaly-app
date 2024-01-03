@@ -8,7 +8,7 @@ modules::import("shiny")
 modules::import("shinydashboard")
 
 # App title ----
-app_title <- "Surveillance of Congenital Anomalies"
+app_title <- "SCA-NS"
 
 # App version ----
 app_version <- "0.0.3"
@@ -34,7 +34,7 @@ iwk_name <- "IWK Health Centre"
 
 cd_shp <- geoarrow::read_geoparquet_sf("./data/NSC_cd.parquet") %>%
  select(GeoUID, name, geometry) %>%
- arrow_table()
+ rmapshaper::ms_simplify()
  # sf::st_make_valid()
  # geoarrow_collect_sf()
 
@@ -42,20 +42,20 @@ cd_shp <- geoarrow::read_geoparquet_sf("./data/NSC_cd.parquet") %>%
 
 cl_shp <- geoarrow::read_geoparquet_sf("./data/NSC_cl.parquet") %>%
  rename(GeoUID = clusterid) %>%
- arrow_table()
+ rmapshaper::ms_simplify()
 
 ## Community Health Networks (CHN) ----
 
 chn_shp <- geoarrow::read_geoparquet_sf("./data/NSC_chn.parquet") %>%
  rename(GeoUID = network_id) %>%
- arrow_table()
+ rmapshaper::ms_simplify()
 
 ## Health Authority Zones (HR) ----
 
 hr_shp <- geoarrow::read_geoparquet_sf("./data/NSC_hr.parquet") %>%
  select(ZoneID, Name, geometry) %>%
  rename(GeoUID = ZoneID) %>%
- arrow_table()
+ rmapshaper::ms_simplify()
 
 # Importing anomaly data ----
 
