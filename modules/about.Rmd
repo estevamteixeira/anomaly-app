@@ -1,0 +1,49 @@
+---
+output: html_document
+---
+
+<style>
+  .container {
+    display: table;
+    width: 100%;
+    margin-bottom: 20px;
+  }
+  
+  .row {
+    display: table-row;
+    vertical-align: middle;
+  }
+  
+  .cell {
+    display: table-cell;
+    padding: 10px;
+    text-align: center;
+  }
+</style>
+
+<table class="container">
+  <tr class="row">
+    <td class="cell">
+      <a href="https://rcp.nshealth.ca/" target="_blank" rel="nofollow noreferrer">
+        <img src="../www/images/logo/rcp-logo-transparent.svg" width="15%">
+      </a>
+    </td>
+  </tr>
+  
+  <tr class="row">
+    <td class="cell">
+      <a href="https://iwkhealth.ca/" target="_blank" rel="nofollow noreferrer">
+        <img src="../www/images/logo/iwk-logo-transparent.svg" width="10%">
+      </a>
+    </td>
+  </tr>
+  
+  <tr class="row">
+    <td class="cell">
+      <a href="https://health-infobase.canada.ca/congenital-anomalies/" target="_blank" rel="nofollow noreferrer">
+        <img src="../www/images/logo/phac-logo-transparent.png" width="30%">
+      </a>
+    </td>
+  </tr>
+</table>
+
